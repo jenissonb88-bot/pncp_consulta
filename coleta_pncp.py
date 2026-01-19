@@ -5,7 +5,7 @@ import os
 import time
 import urllib3
 
-# Desativa avisos de SSL para evitar erros em alguns ambientes
+# Desativa avisos de SSL para o ambiente do GitHub Actions
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURAÇÃO ---
@@ -13,17 +13,19 @@ HEADERS = {
     'Accept': 'application/json',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
-ARQ_DADOS = 'dados.json'
+ARQ_DADOS = 'dados_pncp.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
-DATA_LIMITE_FINAL = datetime(2025, 12, 31)
-DIAS_POR_CICLO = 3 
+DATA_LIMITE_MAXIMA = datetime.now() 
+DIAS_POR_CICLO = 1 # Recomendado para busca global
+
+# Termos que "destravam" a API e focam no seu nicho
+TERMOS_BUSCA = ["medicamento", "hospitalar", "fralda", "alcool", "clorexidina", "seringa", "luva", "gaze"]
 
 def carregar_banco():
     if os.path.exists(ARQ_DADOS):
         try:
             with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
                 dados = json.load(f)
-                # Chave agora é apenas a Licitação para suportar múltiplos resultados
                 return {i['Licitacao']: i for i in dados}
         except: pass
     return {}
@@ -33,119 +35,105 @@ def salvar_estado(banco, data_proxima):
         json.dump(list(banco.values()), f, indent=4, ensure_ascii=False)
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [ESTADO SALVO] Próximo início: {data_proxima.strftime('%d/%m/%Y')}")
+    print(f"\n💾 Checkpoint salvo: {data_proxima.strftime('%d/%m/%Y')} | Banco: {len(banco)} registros")
 
-def ler_checkpoint():
-    if os.path.exists(ARQ_CHECKPOINT):
-        with open(ARQ_CHECKPOINT, 'r') as f:
-            return datetime.strptime(f.read().strip(), '%Y%m%d')
-    return datetime(2025, 1, 1)
+def buscar_detalhes_e_itens(cnpj, ano, seq):
+    """ Busca Objeto, Datas de Proposta e captura até 5000 itens por licitação """
+    info = {"objeto": "", "inicio": None, "fim": None, "itens": []}
+    
+    # 1. Busca Cabeçalho (Objeto e Datas de Proposta)
+    url_cab = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}"
+    try:
+        r = requests.get(url_cab, headers=HEADERS, verify=False, timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            info["objeto"] = d.get('objeto')
+            info["inicio"] = d.get('dataInicioRecebimentoPropostas')
+            info["fim"] = d.get('dataFimRecebimentoPropostas')
+    except: pass
 
-# --- INÍCIO ---
-data_inicio = ler_checkpoint()
-if data_inicio > DATA_LIMITE_FINAL:
-    print("🎯 Missão 2025 concluída!")
+    # 2. Busca Itens (tamanhoPagina=5000)
+    url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens?pagina=1&tamanhoPagina=5000"
+    try:
+        ri = requests.get(url_itens, headers=HEADERS, verify=False, timeout=20)
+        if ri.status_code == 200:
+            for it in ri.json():
+                num_item = it.get('numeroItem')
+                item_data = {
+                    "Item": num_item,
+                    "Desc": it.get('descricao'),
+                    "Status": "Divulgado",
+                    "Vencedor": None,
+                    "CNPJ_Vencedor": None,
+                    "DataHomologacao": None,
+                    "Valor": float(it.get('valorUnitarioEstimado') or 0)
+                }
+                # 3. Busca resultado se o item foi finalizado
+                if it.get('temResultado'):
+                    url_res = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens/{num_item}/resultados"
+                    rr = requests.get(url_res, headers=HEADERS, verify=False, timeout=10)
+                    if rr.status_code == 200:
+                        vends = rr.json()
+                        if isinstance(vends, dict): vends = [vends]
+                        for v in vends:
+                            item_data["Status"] = v.get('statusNome', 'Homologado')
+                            item_data["Vencedor"] = v.get('nomeRazaoSocialFornecedor')
+                            item_data["CNPJ_Vencedor"] = v.get('niFornecedor')
+                            item_data["DataHomologacao"] = v.get('dataHomologacao')
+                            item_data["Valor"] = float(v.get('valorTotalHomologado') or item_data["Valor"])
+                info["itens"].append(item_data)
+    except: pass
+    return info
+
+# --- PROCESSO ---
+banco_total = carregar_banco()
+data_atual = datetime(2025, 1, 1)
+
+if os.path.exists(ARQ_CHECKPOINT):
+    with open(ARQ_CHECKPOINT, 'r') as f:
+        data_atual = datetime.strptime(f.read().strip(), '%Y%m%d')
+
+if data_atual > DATA_LIMITE_MAXIMA:
+    print("✅ Tudo atualizado!")
     exit(0)
 
-data_fim = data_inicio + timedelta(days=DIAS_POR_CICLO - 1)
-if data_fim > DATA_LIMITE_FINAL: data_fim = DATA_LIMITE_FINAL
+print(f"🚀 Sniper Diário: {data_atual.strftime('%d/%m/%Y')}")
 
-print(f"--- 🚀 SNIPER TURBO (BUSCA GLOBAL - 5000 ITENS) ---")
-print(f"--- JANELA: {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')} ---")
+[Image of a logical flowchart showing the script determining the current date and iterating from the checkpoint date up to today's date]
 
-banco_total = carregar_banco()
-data_atual = data_inicio
-
-
-
-while data_atual <= data_fim:
-    DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"\n📅 {data_atual.strftime('%d/%m/%Y')}:", end=" ")
-    
+data_str_api = data_atual.strftime('%Y-%m-%d')
+for termo in TERMOS_BUSCA:
     pagina = 1
     while True:
         url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = {
-            "dataInicial": DATA_STR, "dataFinal": DATA_STR, 
-            "codigoModalidadeContratacao": "6", "pagina": pagina, 
-            "tamanhoPagina": 50
-            # niFornecedor removido para busca global
-        }
-
+        params = {"dataInicial": data_str_api, "dataFinal": data_str_api, "termo": termo, "pagina": pagina, "tamanhoPagina": 50}
         try:
-            resp = requests.get(url, params=params, headers=HEADERS, timeout=30, verify=False)
+            resp = requests.get(url, params=params, headers=HEADERS, verify=False, timeout=30)
             if resp.status_code != 200: break
-            
-            json_resp = resp.json()
-            lics = json_resp.get('data', [])
+            lics = resp.json().get('data', [])
             if not lics: break
-            print(f"[{len(lics)} editais]", end="", flush=True)
 
-            for idx, lic in enumerate(lics):
-                cnpj_org = lic.get('orgaoEntidade', {}).get('cnpj')
-                ano, seq = lic.get('anoCompra'), lic.get('sequencialCompra')
-                uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
-                id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
-                
-                num_edital_real = lic.get('numeroCompra')
-                link_custom = f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}"
-
-                if id_lic in banco_total:
-                    continue
-
-                try:
-                    time.sleep(0.1)
-                    # ADAPTAÇÃO: tamanhoPagina=5000 para capturar todos os itens
-                    r_it = requests.get(f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens?pagina=1&tamanhoPagina=5000", headers=HEADERS, timeout=15, verify=False)
-                    
-                    if r_it.status_code == 200:
-                        itens_api = r_it.json()
-                        
-                        for it in itens_api:
-                            if it.get('temResultado'):
-                                r_v = requests.get(f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens/{it.get('numeroItem')}/resultados", headers=HEADERS, timeout=10, verify=False)
-                                
-                                if r_v.status_code == 200:
-                                    vends = r_v.json()
-                                    if isinstance(vends, dict): vends = [vends]
-                                    
-                                    for v in vends:
-                                        if id_lic not in banco_total:
-                                            banco_total[id_lic] = {
-                                                "DataResult": lic.get('dataAtualizacao') or DATA_STR,
-                                                "DtInicioPropostas": lic.get('dataInicioRecebimentoPropostas'),
-                                                "DtFimPropostas": lic.get('dataFimRecebimentoPropostas'),
-                                                "IdPNCP": lic.get('idContratacaoPncp'),
-                                                "NumEdital": f"{num_edital_real}/{ano}", 
-                                                "Objeto": lic.get('objeto'),
-                                                "Link": link_custom,
-                                                "UASG": uasg, 
-                                                "Edital": f"{str(seq).zfill(5)}/{ano}",
-                                                "Orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                                                "UF": lic.get('unidadeOrgao', {}).get('ufSigla'),
-                                                "Municipio": lic.get('unidadeOrgao', {}).get('municipioNome'),
-                                                "Licitacao": id_lic, 
-                                                "Itens": []
-                                            }
-                                        
-                                        banco_total[id_lic]["Itens"].append({
-                                            "Item": it.get('numeroItem'), 
-                                            "Desc": it.get('descricao'),
-                                            "Fornecedor": v.get('nomeRazaoSocialFornecedor'),
-                                            "CNPJ_Vencedor": v.get('niFornecedor'),
-                                            "Qtd": v.get('quantidadeHomologada'), 
-                                            "Unitario": float(v.get('valorUnitarioHomologado') or 0),
-                                            "Total": float(v.get('valorTotalHomologado') or 0), 
-                                            "Status": v.get('statusNome')
-                                        })
-                        print("🎯", end="", flush=True)
-                except: continue
-            
-            if pagina >= json_resp.get('totalPaginas', 1): break
+            for c in lics:
+                cnpj, ano, seq = c.get('orgaoEntidade', {}).get('cnpj'), c.get('anoCompra'), c.get('sequencialCompra')
+                id_lic = f"{cnpj}-{ano}-{seq}"
+                if id_lic not in banco_total:
+                    detalhes = buscar_detalhes_e_itens(cnpj, ano, seq)
+                    banco_total[id_lic] = {
+                        "IdPNCP": f"{cnpj}-1-{str(seq).zfill(6)}/{ano}",
+                        "Orgao": c.get('orgaoEntidade', {}).get('razaoSocial'),
+                        "Municipio": c.get('unidadeOrgao', {}).get('municipioNome'),
+                        "UF": c.get('unidadeOrgao', {}).get('ufSigla'),
+                        "Objeto": detalhes["objeto"],
+                        "Status": c.get('situacaoNome', 'Divulgada'),
+                        "DtInicioPropostas": detalhes["inicio"],
+                        "DtFimPropostas": detalhes["fim"],
+                        "Link": f"https://pncp.gov.br/app/editais/{cnpj}/{ano}/{seq}",
+                        "Licitacao": id_lic,
+                        "Itens": detalhes["itens"]
+                    }
+                    print("🎯", end="", flush=True)
+            if pagina >= resp.json().get('totalPaginas', 1): break
             pagina += 1
         except: break
-    
-    salvar_estado(banco_total, data_atual + timedelta(days=1))
-    data_atual += timedelta(days=1)
 
-print(f"\n\n✅ Ciclo concluído.")
+salvar_estado(banco_total, data_atual + timedelta(days=1))
