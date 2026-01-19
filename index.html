@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>PNCP Monitor - Pregão Eletrônico</title>
+  <title>PNCP Monitor - Análise Completa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
@@ -28,7 +28,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -122,6 +122,7 @@
       border-radius: 8px;
       border: 1px solid var(--border);
       overflow: auto;
+      margin-bottom: 12px;
     }
 
     table {
@@ -142,6 +143,7 @@
       position: sticky;
       top: 0;
       z-index: 1;
+      font-weight: 600;
     }
 
     tr:nth-child(even) td {
@@ -160,7 +162,7 @@
       padding: 2px 6px;
       border-radius: 999px;
       font-size: 0.75rem;
-      margin-left: 4px;
+      margin: 2px 2px;
     }
 
     .tag-ok { background: #dcfce7; color: var(--success); }
@@ -191,34 +193,43 @@
       cursor: default;
     }
 
-    /* Modal simples */
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.4);
+      background: rgba(0,0,0,0.5);
       z-index: 50;
       align-items: center;
       justify-content: center;
+      overflow-y: auto;
+    }
+
+    .modal.active {
+      display: flex;
     }
 
     .modal-content {
       background: #fff;
-      max-width: 900px;
+      max-width: 1200px;
       width: 95%;
-      max-height: 80vh;
+      max-height: 90vh;
       border-radius: 8px;
       overflow: auto;
       border: 1px solid var(--border);
+      margin: 20px auto;
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 12px;
+      padding: 12px;
       border-bottom: 1px solid var(--border);
       background: #f1f5f9;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .modal-header h2 {
@@ -234,12 +245,71 @@
     }
 
     .modal-body {
-      padding: 8px 12px 12px 12px;
+      padding: 12px;
+    }
+
+    /* Abas */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 8px 12px;
+      border: none;
+      background: #e5e7eb;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Resumo */
+    .resumo-box {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .resumo-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.9rem;
+    }
+
+    .resumo-item strong {
+      color: var(--primary);
+    }
+
+    .valor {
+      font-weight: 600;
+      color: var(--success);
+      font-family: 'Courier New', monospace;
     }
 
     @media (max-width: 768px) {
       th, td {
         padding: 4px 6px;
+        font-size: 0.75rem;
       }
       header h1 {
         font-size: 1.2rem;
@@ -250,8 +320,8 @@
 <body>
   <div class="container">
     <header>
-      <h1>PNCP Monitor</h1>
-      <p>Pregão Eletrônico (código 6) – visão leve com filtros para busca.</p>
+      <h1>PNCP Monitor – Análise Completa</h1>
+      <p>Pregão Eletrônico – Seus itens ganhos, concorrentes e fracassados.</p>
     </header>
 
     <div id="status" class="status-loading">
@@ -260,8 +330,8 @@
 
     <div class="controls">
       <div class="controls-group">
-        <label for="busca">Busca geral:</label>
-        <input id="busca" type="text" placeholder="Órgão, objeto ou fornecedor">
+        <label for="busca">Busca:</label>
+        <input id="busca" type="text" placeholder="Órgão, objeto, fornecedor...">
       </div>
 
       <div class="controls-group">
@@ -272,24 +342,13 @@
       </div>
 
       <div class="controls-group">
-        <label for="filtro-situacao">Situação (seu CNPJ):</label>
-        <select id="filtro-situacao">
-          <option value="">Todas</option>
-          <option value="Venceu">Venceu</option>
-          <option value="SemResultado">Sem resultado</option>
-        </select>
-      </div>
-
-      <div class="controls-group">
-        <button class="btn-secondary" id="btn-limpar">Limpar filtros</button>
-        <button class="btn-primary" id="btn-aplicar">Aplicar filtros</button>
+        <button class="btn-secondary" id="btn-limpar">Limpar</button>
+        <button class="btn-primary" id="btn-aplicar">Aplicar</button>
       </div>
     </div>
 
     <div class="pagination">
-      <div>
-        <span id="info-resultado">0 licitações</span>
-      </div>
+      <span id="info-resultado">0 licitações</span>
       <div>
         <button id="prev-page">&laquo; Anterior</button>
         <span id="page-info">Página 1</span>
@@ -302,11 +361,13 @@
         <thead>
           <tr>
             <th>Órgão/UASG</th>
-            <th>Pregão / ID PNCP</th>
-            <th>Período</th>
+            <th>Pregão</th>
+            <th>Período Propostas</th>
             <th>Cidade/UF</th>
-            <th>Objeto</th>
-            <th>Itens (seu CNPJ)</th>
+            <th>Objeto (sintético)</th>
+            <th>Seus Itens</th>
+            <th>Total Ganho</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody id="corpo-tabela"></tbody>
@@ -314,29 +375,125 @@
     </div>
   </div>
 
-  <!-- Modal de itens -->
-  <div id="modal-itens" class="modal">
+  <!-- Modal de análise completa -->
+  <div id="modal-analise" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-titulo">Itens</h2>
+        <h2 id="modal-titulo">Análise da Licitação</h2>
         <button class="modal-close" id="modal-fechar">&times;</button>
       </div>
       <div class="modal-body">
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Descrição</th>
-              <th>Data Homolog.</th>
-              <th>Qtd</th>
-              <th>Unitário</th>
-              <th>Total</th>
-              <th>Fornecedor</th>
-              <th>Situação</th>
-            </tr>
-          </thead>
-          <tbody id="modal-corpo"></tbody>
-        </table>
+        
+        <!-- Resumo rápido -->
+        <div class="resumo-box">
+          <div class="resumo-item">
+            <strong>Total ganho por você:</strong>
+            <span class="valor" id="resumo-total-seu">R$ 0,00</span>
+          </div>
+          <div class="resumo-item">
+            <strong>Itens (seus):</strong>
+            <span id="resumo-itens-seu">0</span>
+          </div>
+          <div class="resumo-item">
+            <strong>Itens (outros fornecedores):</strong>
+            <span id="resumo-itens-outros">0</span>
+          </div>
+          <div class="resumo-item">
+            <strong>Itens fracassados:</strong>
+            <span id="resumo-itens-fracasso">0</span>
+          </div>
+        </div>
+
+        <!-- Abas -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="seus-itens">Seus Itens</button>
+          <button class="tab-btn" data-tab="todos-fornecedores">Todos Fornecedores</button>
+          <button class="tab-btn" data-tab="fracassados">Fracassados</button>
+        </div>
+
+        <!-- Aba 1: Seus Itens -->
+        <div id="seus-itens" class="tab-content active">
+          <h3>Itens Ganhos por Você</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Descrição</th>
+                  <th>Qtd</th>
+                  <th>Valor Unit.</th>
+                  <th>Valor Total</th>
+                  <th>Data Homol.</th>
+                </tr>
+              </thead>
+              <tbody id="tab-seus-itens-corpo"></tbody>
+            </table>
+          </div>
+
+          <h3 style="margin-top: 16px;">Resumo por Fornecedor (Você)</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fornecedor</th>
+                  <th>CNPJ</th>
+                  <th>Total Ganho</th>
+                </tr>
+              </thead>
+              <tbody id="tab-resumo-fornecedor-corpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Aba 2: Todos Fornecedores -->
+        <div id="todos-fornecedores" class="tab-content">
+          <h3>Todos os Fornecedores e Seus Itens</h3>
+          <p style="font-size: 0.9rem; color: #666;">
+            Inclui seus itens + itens ganhos por concorrentes. Compare suas ofertas com as vencedoras.
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Descrição</th>
+                  <th>Fornecedor</th>
+                  <th>CNPJ</th>
+                  <th>Qtd</th>
+                  <th>Valor Unit.</th>
+                  <th>Valor Total</th>
+                  <th>Data Homol.</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tab-todos-fornecedores-corpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Aba 3: Fracassados -->
+        <div id="fracassados" class="tab-content">
+          <h3>Itens Fracassados ou Desertos</h3>
+          <p style="font-size: 0.9rem; color: #666;">
+            Itens que não tiveram resultado ou nenhum fornecedor ganhou. Oportunidades para complementação.
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Descrição</th>
+                  <th>Qtd Estimada</th>
+                  <th>Valor Estimado Unit.</th>
+                  <th>Valor Estimado Total</th>
+                  <th>Situação</th>
+                </tr>
+              </thead>
+              <tbody id="tab-fracassados-corpo"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -363,7 +520,7 @@
         status.textContent = 'Dados carregados com sucesso.';
         status.className = 'status-success';
       } catch (e) {
-        status.textContent = 'Erro ao carregar dados: ' + e.message;
+        status.textContent = 'Erro ao carregar: ' + e.message;
         status.className = 'status-error';
       }
     }
@@ -375,7 +532,7 @@
         if (lic.uf) ufs.add(lic.uf);
       });
       const ordenadas = Array.from(ufs).sort();
-      selectUF.innerHTML = '<option value=\"\">Todas</option>';
+      selectUF.innerHTML = '<option value="">Todas</option>';
       ordenadas.forEach(uf => {
         const opt = document.createElement('option');
         opt.value = uf;
@@ -387,7 +544,6 @@
     function aplicarFiltros() {
       const termo = document.getElementById('busca').value.toLowerCase().trim();
       const uf = document.getElementById('filtro-uf').value;
-      const situacao = document.getElementById('filtro-situacao').value;
 
       dadosFiltrados = dadosCompletos.filter(lic => {
         let ok = true;
@@ -399,23 +555,24 @@
             lic.objeto,
             lic.cidade,
             lic.id_pncp,
-            ...(lic.itens || []).map(i => i.descricao),
-            ...(lic.itens || []).map(i => i.fornecedor)
+            ...(lic.itens || []).map(i => i.descricao + ' ' + i.fornecedor),
+            ...(lic.itens_todos_fornecedores || []).map(i => i.fornecedor)
           ].join(' ').toLowerCase();
           if (!texto.includes(termo)) ok = false;
         }
 
         if (uf && lic.uf !== uf) ok = false;
 
-        if (situacao) {
-          if (!lic.itens || !lic.itens.some(i => i.situacao === situacao)) ok = false;
-        }
-
         return ok;
       });
 
       paginaAtual = 1;
       atualizarTabela();
+    }
+
+    function calcularTotalSeu(lic) {
+      if (!lic.itens) return 0;
+      return lic.itens.reduce((sum, item) => sum + (item.valor_total_item || 0), 0);
     }
 
     function atualizarTabela() {
@@ -431,24 +588,28 @@
         const idxGlobal = inicio + indexLocal;
         const tr = document.createElement('tr');
 
-        const orgaoUasg = `${lic.orgao_codigo || ''}/${lic.uasg || ''}`;
-        const periodo = `${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}`;
-        const cidadeUf = `${lic.cidade || ''}/${lic.uf || ''}`;
         const qtdItens = lic.itens ? lic.itens.length : 0;
+        const totalSeu = calcularTotalSeu(lic);
 
         tr.innerHTML = `
-          <td>${orgaoUasg}<br><small>${lic.orgao_nome || ''}</small></td>
+          <td>
+            ${lic.orgao_codigo || ''}/${lic.uasg || ''}<br>
+            <small>${lic.orgao_nome || ''}</small>
+          </td>
           <td>
             ${lic.numero_pregao || ''}<br>
-            <a href="${lic.link_edital || '#'}" target="_blank">${lic.id_pncp || ''}</a>
+            <a href="${lic.link_edital || '#'}" target="_blank" style="font-size: 0.75rem;">
+              ${lic.id_pncp || ''}
+            </a>
           </td>
-          <td>${periodo}</td>
-          <td>${cidadeUf}</td>
-          <td>${(lic.objeto || '').substring(0, 80)}${lic.objeto && lic.objeto.length > 80 ? '...' : ''}</td>
+          <td>${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}</td>
+          <td>${lic.cidade || ''} / ${lic.uf || ''}</td>
+          <td>${(lic.objeto || '').substring(0, 60)}${lic.objeto && lic.objeto.length > 60 ? '...' : ''}</td>
+          <td>${qtdItens}</td>
+          <td>${formatarMoeda(totalSeu)}</td>
           <td>
-            ${qtdItens} item${qtdItens !== 1 ? 's' : ''}<br>
-            <button type="button" data-idx="${idxGlobal}" class="btn-secondary btn-itens">
-              Ver itens
+            <button type="button" data-idx="${idxGlobal}" class="btn-secondary btn-analise" style="padding: 4px 8px; font-size: 0.75rem;">
+              Analisar
             </button>
           </td>
         `;
@@ -456,62 +617,174 @@
       });
 
       document.getElementById('info-resultado').textContent =
-        `${total} licitação${total !== 1 ? 'es' : ''} (mostrando ${inicio + 1}-${fim})`;
+        `${total} licitação${total !== 1 ? 'es' : ''} (${inicio + 1}-${fim})`;
 
       const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
       document.getElementById('page-info').textContent = `Página ${paginaAtual} de ${totalPaginas}`;
       document.getElementById('prev-page').disabled = paginaAtual <= 1;
       document.getElementById('next-page').disabled = paginaAtual >= totalPaginas;
 
-      document.querySelectorAll('.btn-itens').forEach(btn => {
+      document.querySelectorAll('.btn-analise').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
-          abrirModalItens(idx);
+          abrirModalAnalise(idx);
         });
       });
     }
 
-    function abrirModalItens(idxGlobal) {
+    function abrirModalAnalise(idxGlobal) {
       const lic = dadosFiltrados[idxGlobal];
-      if (!lic || !lic.itens) return;
+      if (!lic) return;
 
+      // Atualizar título
       document.getElementById('modal-titulo').textContent =
-        `Itens – ${lic.numero_pregao || ''} – ${lic.orgao_nome || ''}`;
+        `${lic.numero_pregao} – ${lic.orgao_nome}`;
 
-      const corpo = document.getElementById('modal-corpo');
+      // Resumo rápido
+      const totalSeu = calcularTotalSeu(lic);
+      const qtdSeus = lic.itens ? lic.itens.length : 0;
+      const qtdOutros = lic.itens_todos_fornecedores ? lic.itens_todos_fornecedores.length : 0;
+      const qtdFracasso = (lic.itens_todos_fornecedores || []).filter(i => i.situacao === 'SemResultado').length;
+
+      document.getElementById('resumo-total-seu').textContent = formatarMoeda(totalSeu);
+      document.getElementById('resumo-itens-seu').textContent = qtdSeus;
+      document.getElementById('resumo-itens-outros').textContent = qtdOutros;
+      document.getElementById('resumo-itens-fracasso').textContent = qtdFracasso;
+
+      // Seus itens
+      preencherTabelaSeuItens(lic);
+
+      // Todos fornecedores
+      preencherTabelaTodosFornecedores(lic);
+
+      // Fracassados
+      preencherTabelaFracassados(lic);
+
+      // Resumo por fornecedor
+      preencherResumoFornecedor(lic);
+
+      // Abrir modal
+      document.getElementById('modal-analise').classList.add('active');
+    }
+
+    function preencherTabelaSeuItens(lic) {
+      const corpo = document.getElementById('tab-seus-itens-corpo');
       corpo.innerHTML = '';
+
+      if (!lic.itens || lic.itens.length === 0) {
+        corpo.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Nenhum item ganho</td></tr>';
+        return;
+      }
 
       lic.itens.forEach(item => {
         const tr = document.createElement('tr');
-
-        let tagHtml = '';
-        if (item.situacao === 'Venceu') {
-          tagHtml = '<span class="tag tag-ok">Venceu</span>';
-        } else if (item.situacao === 'SemResultado') {
-          tagHtml = '<span class="tag tag-bad">Sem resultado</span>';
-        } else {
-          tagHtml = `<span class="tag tag-warn">${item.situacao || ''}</span>`;
-        }
-
         tr.innerHTML = `
           <td>${item.numero_item || ''}</td>
           <td>${item.descricao || ''}</td>
-          <td>${formatarData(item.data_homologacao)}</td>
-          <td>${item.quantidade || ''}</td>
+          <td>${item.quantidade || 0}</td>
           <td>${formatarMoeda(item.valor_unitario)}</td>
-          <td>${formatarMoeda(item.valor_total_item)}</td>
-          <td>${item.fornecedor || ''}</td>
-          <td>${tagHtml}</td>
+          <td><strong>${formatarMoeda(item.valor_total_item)}</strong></td>
+          <td>${formatarData(item.data_homologacao)}</td>
         `;
         corpo.appendChild(tr);
       });
-
-      const modal = document.getElementById('modal-itens');
-      modal.style.display = 'flex';
     }
 
-    function fecharModal() {
-      document.getElementById('modal-itens').style.display = 'none';
+    function preencherTabelaTodosFornecedores(lic) {
+      const corpo = document.getElementById('tab-todos-fornecedores-corpo');
+      corpo.innerHTML = '';
+
+      if (!lic.itens_todos_fornecedores || lic.itens_todos_fornecedores.length === 0) {
+        corpo.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">Sem dados</td></tr>';
+        return;
+      }
+
+      lic.itens_todos_fornecedores.forEach(item => {
+        const tr = document.createElement('tr');
+        const isVoce = (item.cnpj_fornecedor || '').includes('08778201000126') || 
+                       (item.cnpj_fornecedor || '').replace(/\D/g, '') === '08778201000126';
+        
+        let tagStatus = '';
+        if (item.situacao === 'Venceu') {
+          tagStatus = '<span class="tag tag-ok">Venceu</span>';
+        } else if (item.situacao === 'SemResultado') {
+          tagStatus = '<span class="tag tag-bad">Sem resultado</span>';
+        }
+
+        const destaque = isVoce ? 'style="background: #e0f2fe !important; font-weight: 600;"' : '';
+
+        tr.innerHTML = `
+          <td ${destaque}>${item.numero_item || ''}</td>
+          <td ${destaque}>${item.descricao || ''}</td>
+          <td ${destaque}>${item.fornecedor || 'Sem identificação'} ${isVoce ? '<span class="tag tag-ok">✓ Você</span>' : ''}</td>
+          <td ${destaque}>${item.cnpj_fornecedor || ''}</td>
+          <td ${destaque}>${item.quantidade || 0}</td>
+          <td ${destaque}>${formatarMoeda(item.valor_unitario)}</td>
+          <td ${destaque}>${formatarMoeda(item.valor_total_item)}</td>
+          <td ${destaque}>${formatarData(item.data_homologacao)}</td>
+          <td ${destaque}>${tagStatus}</td>
+        `;
+        corpo.appendChild(tr);
+      });
+    }
+
+    function preencherTabelaFracassados(lic) {
+      const corpo = document.getElementById('tab-fracassados-corpo');
+      corpo.innerHTML = '';
+
+      const fracassados = (lic.itens_todos_fornecedores || []).filter(i => i.situacao === 'SemResultado');
+
+      if (fracassados.length === 0) {
+        corpo.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Nenhum item fracassado</td></tr>';
+        return;
+      }
+
+      fracassados.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.numero_item || ''}</td>
+          <td>${item.descricao || ''}</td>
+          <td>${item.quantidade || 0}</td>
+          <td>${formatarMoeda(item.valor_unitario)}</td>
+          <td>${formatarMoeda(item.valor_total_item)}</td>
+          <td><span class="tag tag-bad">Sem resultado</span></td>
+        `;
+        corpo.appendChild(tr);
+      });
+    }
+
+    function preencherResumoFornecedor(lic) {
+      const corpo = document.getElementById('tab-resumo-fornecedor-corpo');
+      corpo.innerHTML = '';
+
+      const resumoMap = new Map();
+      
+      (lic.itens || []).forEach(item => {
+        const key = item.fornecedor + '||' + item.cnpj_fornecedor;
+        if (!resumoMap.has(key)) {
+          resumoMap.set(key, { nome: item.fornecedor, cnpj: item.cnpj_fornecedor, total: 0 });
+        }
+        resumoMap.get(key).total += item.valor_total_item || 0;
+      });
+
+      if (resumoMap.size === 0) {
+        corpo.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">Sem dados</td></tr>';
+        return;
+      }
+
+      Array.from(resumoMap.values())
+        .sort((a, b) => b.total - a.total)
+        .forEach(forn => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${forn.nome || 'Sem identificação'}</strong></td>
+            <td>${forn.cnpj || ''}</td>
+            <td style="text-align: right; font-weight: 600; color: var(--success);">
+              ${formatarMoeda(forn.total)}
+            </td>
+          `;
+          corpo.appendChild(tr);
+        });
     }
 
     function formatarData(iso) {
@@ -522,17 +795,17 @@
     }
 
     function formatarMoeda(v) {
-      if (v === null || v === undefined) return '';
+      if (v === null || v === undefined) return 'R$ 0,00';
       const n = Number(v);
-      if (isNaN(n)) return '';
+      if (isNaN(n)) return 'R$ 0,00';
       return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
+    // Event listeners
     document.getElementById('btn-aplicar').addEventListener('click', aplicarFiltros);
     document.getElementById('btn-limpar').addEventListener('click', () => {
       document.getElementById('busca').value = '';
       document.getElementById('filtro-uf').value = '';
-      document.getElementById('filtro-situacao').value = '';
       dadosFiltrados = dadosCompletos.slice();
       paginaAtual = 1;
       atualizarTabela();
@@ -547,16 +820,34 @@
 
     document.getElementById('next-page').addEventListener('click', () => {
       const total = dadosFiltrados.length;
-      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
+      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_CICLO));
       if (paginaAtual < totalPaginas) {
         paginaAtual++;
         atualizarTabela();
       }
     });
 
-    document.getElementById('modal-fechar').addEventListener('click', fecharModal);
-    document.getElementById('modal-itens').addEventListener('click', (e) => {
-      if (e.target.id === 'modal-itens') fecharModal();
+    document.getElementById('modal-fechar').addEventListener('click', () => {
+      document.getElementById('modal-analise').classList.remove('active');
+    });
+
+    document.getElementById('modal-analise').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-analise') {
+        document.getElementById('modal-analise').classList.remove('active');
+      }
+    });
+
+    // Abas do modal
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.getAttribute('data-tab');
+        
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        
+        btn.classList.add('active');
+        document.getElementById(tabName).classList.add('active');
+      });
     });
 
     document.addEventListener('DOMContentLoaded', carregarDadosPncp);
