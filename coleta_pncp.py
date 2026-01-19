@@ -49,6 +49,35 @@ def ler_checkpoint():
     return datetime(2025, 1, 1)
 
 # -------------------------------------------------
+# DEDUPLICAÇÃO E ATUALIZAÇÃO
+# -------------------------------------------------
+def merge_itens(itens_existentes, novos_itens):
+    """
+    Mescla itens existentes com novos, evitando duplicatas.
+    Se um item já existe (mesmo numero_item + fornecedor), atualiza.
+    """
+    mapa_existentes = {}
+    
+    # Indexa itens existentes por (numero_item, cnpj_fornecedor)
+    for item in itens_existentes:
+        chave = (item['numero_item'], item['cnpj_fornecedor'])
+        mapa_existentes[chave] = item
+    
+    # Atualiza com novos itens (evita duplicata)
+    for novo_item in novos_itens:
+        chave = (novo_item['numero_item'], novo_item['cnpj_fornecedor'])
+        if chave in mapa_existentes:
+            # Atualiza valores (pode ter mudado desde última coleta)
+            mapa_existentes[chave].update(novo_item)
+            print("🔄", end="", flush=True)  # Símbolo de atualização
+        else:
+            # Novo item
+            mapa_existentes[chave] = novo_item
+            print("✅", end="", flush=True)  # Novo item
+    
+    return list(mapa_existentes.values())
+
+# -------------------------------------------------
 # LOOP PRINCIPAL
 # -------------------------------------------------
 data_inicio = ler_checkpoint()
@@ -62,6 +91,7 @@ if data_fim > DATA_LIMITE_FINAL:
 
 print(f"--- 🚀 COLETA PNCP - PREGÃO ELETRÔNICO ---")
 print(f"Alvo: {CNPJ_ALVO} | Janela: {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
+print(f"Legenda: ✅ Novo item | 🔄 Item atualizado | ⚠️ Sem resultado")
 
 banco_total = carregar_banco()
 data_atual = data_inicio
@@ -112,9 +142,6 @@ while data_atual <= data_fim:
 
                 chave = f"{id_licitacao}-{CNPJ_ALVO}"
 
-                if chave in banco_total and banco_total[chave].get("itens"):
-                    continue
-
                 try:
                     time.sleep(0.1)
                     r_it = requests.get(
@@ -129,6 +156,7 @@ while data_atual <= data_fim:
                     if not itens_api:
                         continue
 
+                    # Inicializa ou recupera licitação
                     if chave not in banco_total:
                         banco_total[chave] = {
                             "id_licitacao": id_licitacao,
@@ -150,9 +178,13 @@ while data_atual <= data_fim:
                             "resumo_fornecedores": {}
                         }
 
-                    itens_licitacao = banco_total[chave]["itens"]
-                    itens_todos = banco_total[chave]["itens_todos_fornecedores"]
-                    resumo = banco_total[chave]["resumo_fornecedores"]
+                    # Atualiza data_resultado
+                    banco_total[chave]["data_resultado"] = lic.get('dataAtualizacao') or DATA_STR
+
+                    # Listas temporárias para este ciclo
+                    itens_licitacao_novos = []
+                    itens_todos_novos = []
+                    resumo_novo = {}
 
                     for it in itens_api:
                         numero_item = it.get('numeroItem')
@@ -174,9 +206,7 @@ while data_atual <= data_fim:
                                 if isinstance(vends, dict):
                                     vends = [vends]
 
-                                # ========================================
-                                # CAPTURA COMPLETA: TODOS OS FORNECEDORES
-                                # ========================================
+                                # Captura TODOS os fornecedores
                                 for v in vends:
                                     try:
                                         fornecedor_cnpj = v.get('niFornecedor') or ''
@@ -187,7 +217,6 @@ while data_atual <= data_fim:
                                         tot = float(v.get('valorTotalHomologado') or qtd * unit)
                                         data_homolog = v.get('dataHomologacao') or lic.get('dataAtualizacao')
 
-                                        # Registro completo com todos os dados do item
                                         item_reg = {
                                             "numero_item": numero_item,
                                             "descricao": descricao_item,
@@ -201,21 +230,17 @@ while data_atual <= data_fim:
                                         }
 
                                         # Adiciona a TODOS os fornecedores
-                                        chave_item = f"{numero_item}-{fornecedor_cnpj}"
-                                        if not any(x['numero_item'] == numero_item and x['cnpj_fornecedor'] == fornecedor_cnpj for x in itens_todos):
-                                            itens_todos.append(item_reg)
-                                            print("✅", end="", flush=True)
+                                        itens_todos_novos.append(item_reg)
 
-                                        # Se for nosso CNPJ, adiciona também à seção específica
+                                        # Se for nosso CNPJ
                                         cv_clean = (fornecedor_cnpj or "").replace(".", "").replace("/", "").replace("-", "")
                                         if CNPJ_ALVO in cv_clean:
-                                            if not any(x['numero_item'] == numero_item for x in itens_licitacao):
-                                                itens_licitacao.append(item_reg)
+                                            itens_licitacao_novos.append(item_reg)
                                             
-                                            # Atualiza resumo por fornecedor (seu)
-                                            if fornecedor_nome not in resumo:
-                                                resumo[fornecedor_nome] = 0
-                                            resumo[fornecedor_nome] += tot
+                                            # Resumo por fornecedor
+                                            if fornecedor_nome not in resumo_novo:
+                                                resumo_novo[fornecedor_nome] = 0
+                                            resumo_novo[fornecedor_nome] += tot
 
                                     except Exception as e_inner:
                                         print(f"[erro item: {str(e_inner)[:15]}]", end="")
@@ -226,7 +251,7 @@ while data_atual <= data_fim:
                                 continue
 
                         else:
-                            # Item sem resultado (fracassado/deserto)
+                            # Item sem resultado
                             item_sem_resultado = {
                                 "numero_item": numero_item,
                                 "descricao": descricao_item,
@@ -239,9 +264,24 @@ while data_atual <= data_fim:
                                 "situacao": "SemResultado"
                             }
                             
-                            if not any(x['numero_item'] == numero_item for x in itens_todos):
-                                itens_todos.append(item_sem_resultado)
-                                print("⚠️", end="", flush=True)
+                            itens_todos_novos.append(item_sem_resultado)
+                            print("⚠️", end="", flush=True)
+
+                    # ================================================
+                    # MERGE: Evita duplicatas, atualiza existentes
+                    # ================================================
+                    banco_total[chave]["itens"] = merge_itens(
+                        banco_total[chave]["itens"],
+                        itens_licitacao_novos
+                    )
+                    
+                    banco_total[chape]["itens_todos_fornecedores"] = merge_itens(
+                        banco_total[chave]["itens_todos_fornecedores"],
+                        itens_todos_novos
+                    )
+                    
+                    # Resumo: substitui (não precisa merge, é agregação)
+                    banco_total[chave]["resumo_fornecedores"] = resumo_novo
 
                 except Exception as e:
                     print(f"[erro: {str(e)[:20]}]", end="")
