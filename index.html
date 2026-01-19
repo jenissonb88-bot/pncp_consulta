@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sniper PNCP 2025 - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .stats-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; }
+        .stats-card:hover { transform: translateY(-5px); }
+        .status-badge { border-radius: 20px; padding: 5px 15px; font-size: 0.85rem; }
+        .table-container { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary"><i class="fas fa-crosshairs"></i> Sniper PNCP Global 2025</h2>
+            <p class="text-muted">Monitorização em tempo real de resultados homologados</p>
+        </div>
+        <div id="last-update" class="badge bg-dark p-2">A carregar dados...</div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white p-3">
+                <div class="d-flex justify-content-between">
+                    <div><p class="mb-0">Total Licitações</p><h3 id="total-lic" class="fw-bold">0</h3></div>
+                    <i class="fas fa-file-contract fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white p-3">
+                <div class="d-flex justify-content-between">
+                    <div><p class="mb-0">Valor Total</p><h3 id="total-val" class="fw-bold">R$ 0</h3></div>
+                    <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white p-3">
+                <div class="d-flex justify-content-between">
+                    <div><p class="mb-0">Municípios</p><h3 id="total-mun" class="fw-bold">0</h3></div>
+                    <i class="fas fa-map-marker-alt fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark p-3">
+                <div class="d-flex justify-content-between">
+                    <div><p class="mb-0">Itens Ganhos</p><h3 id="total-itens" class="fw-bold">0</h3></div>
+                    <i class="fas fa-pills fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="tabela-licitacoes" class="table table-hover w-100">
+            <thead class="table-light">
+                <tr>
+                    <th>Data Homologação</th>
+                    <th>Órgão / Município</th>
+                    <th>ID PNCP</th>
+                    <th>Início Propostas</th>
+                    <th>Fim Propostas</th>
+                    <th>Vencedor Principal</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-tabela">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    // Função para formatar data ISO para BR
+    function formatarData(dataStr) {
+        if (!dataStr) return '<span class="text-danger">Pendente</span>';
+        const data = new Date(dataStr);
+        return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    }
+
+    // Carregar o ficheiro dados.json
+    fetch('dados.json')
+        .then(response => response.json())
+        .then(data => {
+            let totalValor = 0;
+            let totalItens = 0;
+            const municipios = new Set();
+
+            const corpo = document.getElementById('corpo-tabela');
+            
+            data.forEach(lic => {
+                municipios.add(lic.Municipio);
+                let valorLic = 0;
+                let principalFornecedor = "";
+
+                lic.Itens.forEach(it => {
+                    totalValor += it.Total;
+                    valorLic += it.Total;
+                    totalItens++;
+                    principalFornecedor = it.Vencedor || it.Fornecedor;
+                });
+
+                const row = `
+                    <tr>
+                        <td>${formatarData(lic.DataHomologacao)}</td>
+                        <td>
+                            <strong>${lic.Orgao}</strong><br>
+                            <small class="text-muted">${lic.Municipio}/${lic.UF}</small>
+                        </td>
+                        <td><code class="text-primary">${lic.IdPNCP || lic.Licitacao}</code></td>
+                        <td>${formatarData(lic.DtInicioPropostas)}</td>
+                        <td>${formatarData(lic.DtFimPropostas)}</td>
+                        <td><small>${principalFornecedor}</small></td>
+                        <td>
+                            <a href="${lic.Link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i> Portal
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                corpo.innerHTML += row;
+            });
+
+            // Atualizar Cartões
+            document.getElementById('total-lic').innerText = data.length;
+            document.getElementById('total-val').innerText = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('total-mun').innerText = municipios.size;
+            document.getElementById('total-itens').innerText = totalItens;
+            document.getElementById('last-update').innerText = "Última Sincronização: " + new Date().toLocaleDateString();
+
+            // Inicializar DataTable
+            $('#tabela-licitacoes').DataTable({
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+                order: [[0, 'desc']],
+                pageLength: 10
+            });
+        })
+        .catch(err => {
+            console.error("Erro ao carregar dados.json:", err);
+            document.getElementById('corpo-tabela').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar o arquivo dados.json. Certifique-se de que ele existe.</td></tr>';
+        });
+</script>
+</body>
+</html>
