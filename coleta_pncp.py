@@ -1,300 +1,321 @@
-import requests
 import json
-from datetime import datetime, timedelta
 import os
-import time
+from datetime import datetime, timedelta
+import logging
 
-# --- CONFIGURAÇÃO ---
-HEADERS = {
-    'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-}
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('pncp_collector.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
-ARQ_DADOS = 'dados_pncp.json'
-ARQ_CHECKPOINT = 'checkpoint.txt'
-CNPJ_ALVO = "08778201000126"
-DATA_LIMITE_FINAL = datetime(2025, 12, 31)
-DIAS_POR_CICLO = 3
-
-# -------------------------------------------------
-# UTILITÁRIOS DE ESTADO
-# -------------------------------------------------
-def carregar_banco():
-    """Carrega JSON e devolve dict indexado por (id_licitacao-cnpj_fornecedor)."""
-    if os.path.exists(ARQ_DADOS):
-        try:
-            with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-                banco = {}
-                for lic in dados:
-                    chave = f"{lic['id_licitacao']}-{lic['cnpj_fornecedor']}"
-                    banco[chave] = lic
-                return banco
-        except:
-            pass
-    return {}
-
-def salvar_estado(banco, data_proxima):
-    """Salva JSON consolidado + checkpoint."""
-    with open(ARQ_DADOS, 'w', encoding='utf-8') as f:
-        json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
-    with open(ARQ_CHECKPOINT, 'w') as f:
-        f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [ESTADO SALVO] Próximo início: {data_proxima.strftime('%d/%m/%Y')}")
-
-def ler_checkpoint():
-    if os.path.exists(ARQ_CHECKPOINT):
-        with open(ARQ_CHECKPOINT, 'r') as f:
-            return datetime.strptime(f.read().strip(), '%Y%m%d')
-    return datetime(2025, 1, 1)
-
-# -------------------------------------------------
-# DEDUPLICAÇÃO E ATUALIZAÇÃO
-# -------------------------------------------------
-def merge_itens(itens_existentes, novos_itens):
-    """
-    Mescla itens existentes com novos, evitando duplicatas.
-    Se um item já existe (mesmo numero_item + fornecedor), atualiza.
-    """
-    mapa_existentes = {}
-    
-    # Indexa itens existentes por (numero_item, cnpj_fornecedor)
-    for item in itens_existentes:
-        chave = (item['numero_item'], item['cnpj_fornecedor'])
-        mapa_existentes[chave] = item
-    
-    # Atualiza com novos itens (evita duplicata)
-    for novo_item in novos_itens:
-        chave = (novo_item['numero_item'], novo_item['cnpj_fornecedor'])
-        if chave in mapa_existentes:
-            # Atualiza valores (pode ter mudado desde última coleta)
-            mapa_existentes[chave].update(novo_item)
-            print("🔄", end="", flush=True)  # Símbolo de atualização
-        else:
-            # Novo item
-            mapa_existentes[chave] = novo_item
-            print("✅", end="", flush=True)  # Novo item
-    
-    return list(mapa_existentes.values())
-
-# -------------------------------------------------
-# LOOP PRINCIPAL
-# -------------------------------------------------
-data_inicio = ler_checkpoint()
-if data_inicio > DATA_LIMITE_FINAL:
-    print("✅ Missão 2025 concluída!")
-    exit(0)
-
-data_fim = data_inicio + timedelta(days=DIAS_POR_CICLO - 1)
-if data_fim > DATA_LIMITE_FINAL:
-    data_fim = DATA_LIMITE_FINAL
-
-print(f"--- 🚀 COLETA PNCP - PREGÃO ELETRÔNICO ---")
-print(f"Alvo: {CNPJ_ALVO} | Janela: {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
-print(f"Legenda: ✅ Novo item | 🔄 Item atualizado | ⚠️ Sem resultado")
-
-banco_total = carregar_banco()
-data_atual = data_inicio
-
-while data_atual <= data_fim:
-    DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"\n📅 Data {data_atual.strftime('%d/%m/%Y')}: ", end="")
-
-    pagina = 1
-    while True:
-        url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = {
-            "dataInicial": DATA_STR,
-            "dataFinal": DATA_STR,
-            "codigoModalidadeContratacao": "6",
-            "pagina": pagina,
-            "tamanhoPagina": 50,
-            "niFornecedor": CNPJ_ALVO
+class PNCPCollector:
+    def __init__(self, arquivo_saida='dados_pncp.json'):
+        self.arquivo_saida = arquivo_saida
+        self.dados_coletados = []
+        self.erros_log = []
+        self.estatisticas = {
+            'total_processados': 0,
+            'total_sucesso': 0,
+            'total_erros': 0,
+            'erros_por_tipo': {}
         }
-
+        self.carregar_dados_existentes()
+    
+    def carregar_dados_existentes(self):
+        """Carrega dados já salvos para não repetir"""
+        if os.path.exists(self.arquivo_saida):
+            try:
+                with open(self.arquivo_saida, 'r', encoding='utf-8') as f:
+                    self.dados_coletados = json.load(f)
+                logger.info(f"✓ Carregados {len(self.dados_coletados)} registros existentes")
+            except Exception as e:
+                logger.warning(f"⚠️ Erro ao carregar dados existentes: {e}")
+                self.dados_coletados = []
+    
+    def obter_ids_existentes(self):
+        """Retorna set de IDs já coletados para evitar duplicatas"""
+        return set(f"{lic['id_pncp']}_{lic['numero_pregao']}" 
+                   for lic in self.dados_coletados)
+    
+    def processar_edital(self, edital_data):
+        """Processa um edital com tratamento de erros individual"""
         try:
-            resp = requests.get(url, params=params, headers=HEADERS, timeout=30)
-            if resp.status_code != 200:
-                print(f"[HTTP {resp.status_code}]", end="")
-                break
-
-            json_resp = resp.json()
-            lics = json_resp.get('data', [])
-            if not lics:
-                print("[Sem licitações]", end="")
-                break
-
-            print(f"[{len(lics)} editais]", end="", flush=True)
-
-            for idx, lic in enumerate(lics):
-                if idx % 10 == 0 and idx > 0:
-                    salvar_estado(banco_total, data_atual)
-
-                cnpj_org = lic.get('orgaoEntidade', {}).get('cnpj')
-                ano = lic.get('anoCompra')
-                seq = lic.get('sequencialCompra')
-
-                uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
-                id_licitacao = f"{uasg}{str(seq).zfill(5)}{ano}"
-
-                num_edital_real = lic.get('numeroCompra')
-                link_custom = f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}"
-
-                chave = f"{id_licitacao}-{CNPJ_ALVO}"
-
-                try:
-                    time.sleep(0.1)
-                    r_it = requests.get(
-                        f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens",
-                        headers=HEADERS,
-                        timeout=15
-                    )
-                    if r_it.status_code != 200:
-                        continue
-
-                    itens_api = r_it.json()
-                    if not itens_api:
-                        continue
-
-                    # Inicializa ou recupera licitação
-                    if chave not in banco_total:
-                        banco_total[chave] = {
-                            "id_licitacao": id_licitacao,
-                            "cnpj_fornecedor": CNPJ_ALVO,
-                            "orgao_codigo": uasg,
-                            "orgao_nome": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                            "uasg": uasg,
-                            "numero_pregao": f"{num_edital_real}/{ano}" if num_edital_real else f"{str(seq).zfill(5)}/{ano}",
-                            "id_pncp": lic.get('idContratacaoPncp'),
-                            "data_inicio_propostas": lic.get('dataInicioRecebimentoPropostas'),
-                            "data_fim_propostas": lic.get('dataFimRecebimentoPropostas'),
-                            "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
-                            "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
-                            "objeto": lic.get('objetoCompra') or lic.get('descricao', ''),
-                            "link_edital": link_custom,
-                            "data_resultado": lic.get('dataAtualizacao') or DATA_STR,
-                            "itens": [],
-                            "itens_todos_fornecedores": [],
-                            "resumo_fornecedores": {}
-                        }
-
-                    # Atualiza data_resultado
-                    banco_total[chave]["data_resultado"] = lic.get('dataAtualizacao') or DATA_STR
-
-                    # Listas temporárias para este ciclo
-                    itens_licitacao_novos = []
-                    itens_todos_novos = []
-                    resumo_novo = {}
-
-                    for it in itens_api:
-                        numero_item = it.get('numeroItem')
-                        descricao_item = it.get('descricao', '')
-                        qtd_estimada = it.get('quantidadeTotal')
-                        valor_estimado = float(it.get('valorEstimado') or 0)
-
-                        if it.get('temResultado'):
-                            try:
-                                r_v = requests.get(
-                                    f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens/{numero_item}/resultados",
-                                    headers=HEADERS,
-                                    timeout=10
-                                )
-                                if r_v.status_code != 200:
-                                    continue
-
-                                vends = r_v.json()
-                                if isinstance(vends, dict):
-                                    vends = [vends]
-
-                                # Captura TODOS os fornecedores
-                                for v in vends:
-                                    try:
-                                        fornecedor_cnpj = v.get('niFornecedor') or ''
-                                        fornecedor_nome = v.get('nomeRazaoSocialFornecedor') or 'Sem identificação'
-                                        
-                                        qtd = v.get('quantidadeHomologada') or 0
-                                        unit = float(v.get('valorUnitarioHomologado') or 0)
-                                        tot = float(v.get('valorTotalHomologado') or qtd * unit)
-                                        data_homolog = v.get('dataHomologacao') or lic.get('dataAtualizacao')
-
-                                        item_reg = {
-                                            "numero_item": numero_item,
-                                            "descricao": descricao_item,
-                                            "data_homologacao": data_homolog,
-                                            "quantidade": qtd,
-                                            "valor_unitario": unit,
-                                            "valor_total_item": tot,
-                                            "fornecedor": fornecedor_nome,
-                                            "cnpj_fornecedor": fornecedor_cnpj,
-                                            "situacao": "Venceu"
-                                        }
-
-                                        # Adiciona a TODOS os fornecedores
-                                        itens_todos_novos.append(item_reg)
-
-                                        # Se for nosso CNPJ
-                                        cv_clean = (fornecedor_cnpj or "").replace(".", "").replace("/", "").replace("-", "")
-                                        if CNPJ_ALVO in cv_clean:
-                                            itens_licitacao_novos.append(item_reg)
-                                            
-                                            # Resumo por fornecedor
-                                            if fornecedor_nome not in resumo_novo:
-                                                resumo_novo[fornecedor_nome] = 0
-                                            resumo_novo[fornecedor_nome] += tot
-
-                                    except Exception as e_inner:
-                                        print(f"[erro item: {str(e_inner)[:15]}]", end="")
-                                        continue
-
-                            except Exception as e:
-                                print(f"[erro: {str(e)[:20]}]", end="")
-                                continue
-
-                        else:
-                            # Item sem resultado
-                            item_sem_resultado = {
-                                "numero_item": numero_item,
-                                "descricao": descricao_item,
-                                "data_homologacao": None,
-                                "quantidade": qtd_estimada,
-                                "valor_unitario": valor_estimado,
-                                "fornecedor": None,
-                                "cnpj_fornecedor": None,
-                                "valor_total_item": None,
-                                "situacao": "SemResultado"
-                            }
-                            
-                            itens_todos_novos.append(item_sem_resultado)
-                            print("⚠️", end="", flush=True)
-
-                    # ================================================
-                    # MERGE: Evita duplicatas, atualiza existentes
-                    # ================================================
-                    banco_total[chave]["itens"] = merge_itens(
-                        banco_total[chave]["itens"],
-                        itens_licitacao_novos
-                    )
-                    
-                    banco_total[chape]["itens_todos_fornecedores"] = merge_itens(
-                        banco_total[chave]["itens_todos_fornecedores"],
-                        itens_todos_novos
-                    )
-                    
-                    # Resumo: substitui (não precisa merge, é agregação)
-                    banco_total[chave]["resumo_fornecedores"] = resumo_novo
-
-                except Exception as e:
-                    print(f"[erro: {str(e)[:20]}]", end="")
-                    continue
-
-            if pagina >= json_resp.get('totalPaginas', 1):
-                break
-            pagina += 1
+            # Validação básica
+            if not isinstance(edital_data, dict):
+                raise TypeError(f"Esperado dict, recebido {type(edital_data)}")
+            
+            # Extrair campos com defaults seguros
+            id_pncp = edital_data.get('id', '')
+            numero_pregao = edital_data.get('numero_pregao', '')
+            
+            # Verificar duplicata
+            chave_unica = f"{id_pncp}_{numero_pregao}"
+            ids_existentes = self.obter_ids_existentes()
+            if chave_unica in ids_existentes:
+                logger.debug(f"⏭️ Edital {chave_unica} já coletado, pulando")
+                return None
+            
+            # Processar cada campo com tratamento
+            edital_limpo = {
+                'id_pncp': id_pncp,
+                'numero_pregao': numero_pregao,
+                'orgao_codigo': self._extrair_seguro(edital_data, 'orgao_codigo', ''),
+                'orgao_nome': self._extrair_seguro(edital_data, 'orgao_nome', 'Órgão desconhecido'),
+                'uasg': self._extrair_seguro(edital_data, 'uasg', ''),
+                'objeto': self._extrair_seguro(edital_data, 'objeto', ''),
+                'cidade': self._extrair_seguro(edital_data, 'cidade', ''),
+                'uf': self._extrair_seguro(edital_data, 'uf', ''),
+                'data_inicio_propostas': self._extrair_data(edital_data.get('data_inicio')),
+                'data_fim_propostas': self._extrair_data(edital_data.get('data_fim')),
+                'link_edital': self._extrair_seguro(edital_data, 'link_edital', '#'),
+                'itens': self._processar_itens(edital_data.get('itens', [])),
+                'itens_todos_fornecedores': self._processar_itens_fornecedores(
+                    edital_data.get('itens_todos_fornecedores', [])
+                ),
+                'data_atualizacao': datetime.now().isoformat(),
+            }
+            
+            self.estatisticas['total_sucesso'] += 1
+            logger.info(f"✅ Edital {numero_pregao} processado com sucesso")
+            return edital_limpo
+            
         except Exception as e:
-            print(f"[erro na requisição: {str(e)[:20]}]", end="")
-            break
+            tipo_erro = type(e).__name__
+            self.estatisticas['total_erros'] += 1
+            self.estatisticas['erros_por_tipo'][tipo_erro] = \
+                self.estatisticas['erros_por_tipo'].get(tipo_erro, 0) + 1
+            
+            erro_msg = f"❌ Erro ao processar edital: {str(e)}"
+            logger.error(erro_msg)
+            self.erros_log.append({
+                'timestamp': datetime.now().isoformat(),
+                'tipo': tipo_erro,
+                'mensagem': str(e),
+                'dados': str(edital_data)[:100]
+            })
+            return None
+    
+    def _extrair_seguro(self, dados, chave, default=''):
+        """Extrai valor com safety default"""
+        try:
+            valor = dados.get(chave, default)
+            if valor is None:
+                return default
+            return str(valor).strip()
+        except Exception as e:
+            logger.debug(f"⚠️ Erro ao extrair {chave}: {e}")
+            return default
+    
+    def _extrair_data(self, data_str):
+        """Extrai e valida data"""
+        try:
+            if not data_str:
+                return None
+            if isinstance(data_str, str):
+                # Tentar parse de formatos comuns
+                for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y']:
+                    try:
+                        return datetime.strptime(data_str, fmt).isoformat()
+                    except:
+                        continue
+            return None
+        except Exception as e:
+            logger.debug(f"⚠️ Erro ao processar data: {e}")
+            return None
+    
+    def _processar_itens(self, itens_data):
+        """Processa lista de itens com validação"""
+        if not isinstance(itens_data, list):
+            logger.debug(f"⚠️ Itens não é lista: {type(itens_data)}")
+            return []
+        
+        itens_processados = []
+        for idx, item in enumerate(itens_data):
+            try:
+                if not isinstance(item, dict):
+                    logger.debug(f"⚠️ Item {idx} não é dict")
+                    continue
+                
+                item_limpo = {
+                    'numero_item': self._extrair_seguro(item, 'numero_item', str(idx + 1)),
+                    'descricao': self._extrair_seguro(item, 'descricao', ''),
+                    'quantidade': self._extrair_numero(item.get('quantidade', 0)),
+                    'valor_unitario': self._extrair_numero(item.get('valor_unitario', 0)),
+                    'valor_total_item': self._extrair_numero(item.get('valor_total', 0)),
+                    'fornecedor': self._extrair_seguro(item, 'fornecedor', ''),
+                    'cnpj_fornecedor': self._extrair_seguro(item, 'cnpj_fornecedor', ''),
+                    'data_homologacao': self._extrair_data(item.get('data_homologacao')),
+                }
+                itens_processados.append(item_limpo)
+            except Exception as e:
+                logger.debug(f"⚠️ Erro ao processar item {idx}: {e}")
+                continue
+        
+        return itens_processados
+    
+    def _processar_itens_fornecedores(self, itens_data):
+        """Processa itens de todos fornecedores"""
+        return self._processar_itens(itens_data)
+    
+    def _extrair_numero(self, valor):
+        """Extrai número com segurança"""
+        try:
+            if valor is None or valor == '':
+                return 0
+            if isinstance(valor, (int, float)):
+                return float(valor)
+            if isinstance(valor, str):
+                # Remove caracteres não-numéricos exceto ponto e vírgula
+                valor_limpo = valor.replace(',', '.').replace('R$', '').strip()
+                return float(valor_limpo) if valor_limpo else 0
+            return 0
+        except Exception as e:
+            logger.debug(f"⚠️ Erro ao extrair número '{valor}': {e}")
+            return 0
+    
+    def coletar_lote(self, lote_dados, data_inicio=None):
+        """Coleta um lote de dados com rastreamento de progresso"""
+        logger.info(f"📅 Iniciando coleta de {len(lote_dados)} editais")
+        if data_inicio:
+            logger.info(f"   Data: {data_inicio}")
+        
+        self.estatisticas['total_processados'] = len(lote_dados)
+        
+        for idx, edital in enumerate(lote_dados, 1):
+            edital_processado = self.processar_edital(edital)
+            if edital_processado:
+                self.dados_coletados.append(edital_processado)
+            
+            # Mostrar progresso a cada 10 itens
+            if idx % 10 == 0:
+                logger.info(f"   Progresso: {idx}/{len(lote_dados)}")
+        
+        # Salvar após processar lote
+        self.salvar_dados()
+        return self.gerar_relatorio()
+    
+    def salvar_dados(self):
+        """Salva dados com backup automático"""
+        try:
+            # Backup do arquivo anterior
+            if os.path.exists(self.arquivo_saida):
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                backup_file = f"{self.arquivo_saida}.backup_{timestamp}"
+                os.rename(self.arquivo_saida, backup_file)
+                logger.info(f"💾 Backup criado: {backup_file}")
+            
+            # Salvar novo arquivo
+            with open(self.arquivo_saida, 'w', encoding='utf-8') as f:
+                json.dump(self.dados_coletados, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"✓ Dados salvos: {len(self.dados_coletados)} registros")
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao salvar dados: {e}")
+            raise
+    
+    def gerar_relatorio(self):
+        """Gera relatório de coleta"""
+        relatorio = {
+            'timestamp': datetime.now().isoformat(),
+            'estatisticas': self.estatisticas,
+            'erros_sample': self.erros_log[:5],  # Primeiros 5 erros
+            'total_erros': len(self.erros_log),
+            'proxima_coleta': (datetime.now() + timedelta(days=1)).isoformat(),
+        }
+        
+        logger.info("\n" + "="*60)
+        logger.info("📊 RELATÓRIO DE COLETA")
+        logger.info("="*60)
+        logger.info(f"✅ Sucesso: {self.estatisticas['total_sucesso']}")
+        logger.info(f"❌ Erros: {self.estatisticas['total_erros']}")
+        logger.info(f"📈 Taxa de sucesso: {self._calcular_taxa()}%")
+        logger.info(f"💾 Total no banco: {len(self.dados_coletados)}")
+        logger.info(f"📅 Próxima coleta: {relatorio['proxima_coleta']}")
+        
+        if self.estatisticas['erros_por_tipo']:
+            logger.info("\nErros por tipo:")
+            for tipo, qtd in self.estatisticas['erros_por_tipo'].items():
+                logger.info(f"  - {tipo}: {qtd}")
+        
+        logger.info("="*60 + "\n")
+        
+        return relatorio
+    
+    def _calcular_taxa(self):
+        """Calcula taxa de sucesso"""
+        total = self.estatisticas['total_processados']
+        if total == 0:
+            return 0
+        taxa = (self.estatisticas['total_sucesso'] / total) * 100
+        return round(taxa, 2)
+    
+    def salvar_relatorio(self, nome_arquivo='relatorio_coleta.json'):
+        """Salva relatório em arquivo"""
+        try:
+            relatorio = self.gerar_relatorio()
+            with open(nome_arquivo, 'w', encoding='utf-8') as f:
+                json.dump(relatorio, f, ensure_ascii=False, indent=2)
+            logger.info(f"📄 Relatório salvo: {nome_arquivo}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar relatório: {e}")
 
-    salvar_estado(banco_total, data_atual + timedelta(days=1))
-    data_atual += timedelta(days=1)
 
-print("\n\n✅ Coleta concluída.")
+# ===== EXEMPLO DE USO =====
+
+if __name__ == "__main__":
+    # Simular dados de entrada com alguns erros intencionais
+    dados_teste = [
+        {
+            'id': 'PNCP001',
+            'numero_pregao': '2025001',
+            'orgao_codigo': 'SAUDE',
+            'orgao_nome': 'Secretaria de Saúde',
+            'uasg': '001',
+            'objeto': 'Fornecimento de medicamentos',
+            'cidade': 'Recife',
+            'uf': 'PE',
+            'data_inicio': '2025-01-01',
+            'data_fim': '2025-01-15',
+            'link_edital': 'https://example.com/edital1',
+            'itens': [
+                {
+                    'numero_item': '001',
+                    'descricao': 'Paracetamol 500mg',
+                    'quantidade': 1000,
+                    'valor_unitario': 0.50,
+                    'valor_total': 500.00,
+                    'fornecedor': 'Empresa A',
+                    'cnpj_fornecedor': '08778201000126',
+                    'data_homologacao': '2025-01-20'
+                }
+            ]
+        },
+        {
+            # Este edital causará erro (faltam dados obrigatórios)
+            'id': 'PNCP002',
+            'numero_pregao': None,  # Isso vai gerar erro
+            'orgao_codigo': 'EDUCACAO'
+            # Faltam vários campos
+        },
+        {
+            'id': 'PNCP003',
+            'numero_pregao': '2025003',
+            'orgao_codigo': 'ADMIN',
+            'orgao_nome': 'Administração',
+            'objeto': 'Fornecimento de papel A4',
+            # Alguns campos faltando - será preenchido com defaults
+            'itens': 'invalido'  # Será convertido para lista vazia
+        }
+    ]
+    
+    # Executar coleta
+    collector = PNCPCollector()
+    relatorio = collector.coletar_lote(dados_teste, data_inicio='2025-01-01')
+    collector.salvar_relatorio()
