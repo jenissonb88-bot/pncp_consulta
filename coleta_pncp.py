@@ -25,7 +25,6 @@ def carregar_banco():
         try:
             with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
                 dados = json.load(f)
-                # dados agora será lista de licitações; indexar
                 banco = {}
                 for lic in dados:
                     chave = f"{lic['id_licitacao']}-{lic['cnpj_fornecedor']}"
@@ -47,7 +46,6 @@ def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
         with open(ARQ_CHECKPOINT, 'r') as f:
             return datetime.strptime(f.read().strip(), '%Y%m%d')
-    # início da busca
     return datetime(2025, 1, 1)
 
 # -------------------------------------------------
@@ -78,7 +76,7 @@ while data_atual <= data_fim:
         params = {
             "dataInicial": DATA_STR,
             "dataFinal": DATA_STR,
-            "codigoModalidadeContratacao": "6",  # pregão eletrônico
+            "codigoModalidadeContratacao": "6",
             "pagina": pagina,
             "tamanhoPagina": 50,
             "niFornecedor": CNPJ_ALVO
@@ -109,12 +107,11 @@ while data_atual <= data_fim:
                 uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
                 id_licitacao = f"{uasg}{str(seq).zfill(5)}{ano}"
 
-                num_edital_real = lic.get('numeroCompra')  # número oficial (ex: 90007)
+                num_edital_real = lic.get('numeroCompra')
                 link_custom = f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}"
 
                 chave = f"{id_licitacao}-{CNPJ_ALVO}"
 
-                # Se já temos itens cadastrados, pule
                 if chave in banco_total and banco_total[chave].get("itens"):
                     continue
 
@@ -132,7 +129,6 @@ while data_atual <= data_fim:
                     if not itens_api:
                         continue
 
-                    # Garante estrutura base da licitação no banco
                     if chave not in banco_total:
                         banco_total[chave] = {
                             "id_licitacao": id_licitacao,
@@ -156,19 +152,14 @@ while data_atual <= data_fim:
                     itens_licitacao = banco_total[chave]["itens"]
                     itens_todos = banco_total[chave]["itens_todos_fornecedores"]
 
-                    # Para calcular total por fornecedor dentro da licitação
                     totais_fornecedor = {}
 
-                    # ========================================================================
-                    # NOVO: COLETA TODOS OS ITENS, NÃO APENAS OS DO CNPJ_ALVO
-                    # ========================================================================
                     for it in itens_api:
                         numero_item = it.get('numeroItem')
                         descricao_item = it.get('descricao', '')
                         qtd_estimada = it.get('quantidadeTotal')
                         valor_estimado = float(it.get('valorEstimado') or 0)
 
-                        # SE TEM RESULTADO: puxa os fornecedores/vencedores
                         if it.get('temResultado'):
                             try:
                                 r_v = requests.get(
@@ -183,7 +174,6 @@ while data_atual <= data_fim:
                                 if isinstance(vends, dict):
                                     vends = [vends]
 
-                                # COLETA TODOS OS FORNECEDORES (não filtra por CNPJ_ALVO aqui)
                                 for v in vends:
                                     fornecedor_cnpj = v.get('niFornecedor') or ''
                                     fornecedor_nome = v.get('nomeRazaoSocialFornecedor')
@@ -193,7 +183,6 @@ while data_atual <= data_fim:
                                     tot = float(v.get('valorTotalHomologado') or qtd * unit)
                                     data_homolog = v.get('dataHomologacao') or lic.get('dataAtualizacao')
 
-                                    # Marca se é nosso CNPJ ou não
                                     cv_clean = (fornecedor_cnpj or "").replace(".", "").replace("/", "").replace("-", "")
                                     eh_nosso = CNPJ_ALVO in cv_clean
 
@@ -209,11 +198,9 @@ while data_atual <= data_fim:
                                         "situacao": "Venceu"
                                     }
 
-                                    # Adiciona em TODOS os itens
                                     if not any(x['numero_item'] == numero_item and x['fornecedor'] == fornecedor_nome for x in itens_todos):
                                         itens_todos.append(item_reg)
 
-                                    # Se é nosso CNPJ, adiciona também em itens específicos e soma total
                                     if eh_nosso:
                                         if not any(x['numero_item'] == numero_item for x in itens_licitacao):
                                             itens_licitacao.append(item_reg)
@@ -225,11 +212,10 @@ while data_atual <= data_fim:
                                     print("✅", end="", flush=True)
 
                             except Exception as e:
-                                print(f"[erro ao processar resultados: {e}]", end="")
+                                print(f"[erro: {str(e)[:20]}]", end="")
                                 continue
 
                         else:
-                            # ITEM SEM RESULTADO: deserto ou fracassado
                             item_sem_resultado = {
                                 "numero_item": numero_item,
                                 "descricao": descricao_item,
@@ -247,7 +233,6 @@ while data_atual <= data_fim:
 
                             print("⚠️", end="", flush=True)
 
-                    # Atualiza totais por fornecedor (apenas para nosso CNPJ)
                     banco_total[chave]["totais_fornecedor"] = [
                         {
                             "fornecedor": forn,
@@ -257,18 +242,17 @@ while data_atual <= data_fim:
                     ]
 
                 except Exception as e:
-                    print(f"[erro geral: {str(e)[:30]}]", end="")
+                    print(f"[erro: {str(e)[:20]}]", end="")
                     continue
 
             if pagina >= json_resp.get('totalPaginas', 1):
                 break
             pagina += 1
         except Exception as e:
-            print(f"[erro na requisição: {str(e)[:30]}]", end="")
+            print(f"[erro na requisição: {str(e)[:20]}]", end="")
             break
 
     salvar_estado(banco_total, data_atual + timedelta(days=1))
     data_atual += timedelta(days=1)
 
 print("\n\n✅ Coleta concluída.")
-```
