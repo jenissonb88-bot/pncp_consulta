@@ -117,6 +117,21 @@
       color: #111827;
     }
 
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .btn-link {
+      background: var(--primary);
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+    }
+
+    .btn-link:hover {
+      background: var(--primary-dark);
+    }
+
     .table-wrapper {
       background: var(--card);
       border-radius: 8px;
@@ -306,6 +321,11 @@
       font-family: 'Courier New', monospace;
     }
 
+    .link-pncp {
+      display: inline-block;
+      margin-top: 4px;
+    }
+
     @media (max-width: 768px) {
       th, td {
         padding: 4px 6px;
@@ -379,7 +399,12 @@
   <div id="modal-analise" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-titulo">Análise da Licitação</h2>
+        <div>
+          <h2 id="modal-titulo">Análise da Licitação</h2>
+          <div class="link-pncp">
+            <a id="modal-link-pncp" href="#" target="_blank" class="btn-link">🔗 Abrir no PNCP</a>
+          </div>
+        </div>
         <button class="modal-close" id="modal-fechar">&times;</button>
       </div>
       <div class="modal-body">
@@ -640,6 +665,9 @@
       document.getElementById('modal-titulo').textContent =
         `${lic.numero_pregao} – ${lic.orgao_nome}`;
 
+      // Atualizar link PNCP
+      document.getElementById('modal-link-pncp').href = lic.link_edital || '#';
+
       // Resumo rápido
       const totalSeu = calcularTotalSeu(lic);
       const qtdSeus = lic.itens ? lic.itens.length : 0;
@@ -820,7 +848,7 @@
 
     document.getElementById('next-page').addEventListener('click', () => {
       const total = dadosFiltrados.length;
-      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_CICLO));
+      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
       if (paginaAtual < totalPaginas) {
         paginaAtual++;
         atualizarTabela();
