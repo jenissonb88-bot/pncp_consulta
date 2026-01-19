@@ -5,7 +5,6 @@ import os
 import time
 import urllib3
 
-# Desativa avisos de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURAÇÃO ---
@@ -15,9 +14,8 @@ HEADERS = {
 }
 ARQ_DADOS = 'dados_pncp.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
-CNPJ_ALVO = "08778201000126" # Drogafonte
+CNPJ_ALVO = "08778201000126"
 DATA_LIMITE_MAXIMA = datetime.now() 
-DIAS_POR_CICLO = 1 
 
 def carregar_banco():
     if os.path.exists(ARQ_DADOS):
@@ -36,7 +34,7 @@ def salvar_estado(banco, data_proxima):
     print(f"\n💾 Checkpoint salvo: {data_proxima.strftime('%d/%m/%Y')} | Banco: {len(banco)} registros")
 
 def buscar_detalhes_e_itens(cnpj, ano, seq):
-    """ Busca Objeto, Datas de Proposta e captura até 5000 itens da licitação """
+    """ Busca Objeto, Datas de Proposta e captura TODOS os itens da licitação """
     info = {"objeto": "", "inicio": None, "fim": None, "itens": []}
     
     # 1. Cabeçalho (Objeto e Prazos)
@@ -50,7 +48,7 @@ def buscar_detalhes_e_itens(cnpj, ano, seq):
             info["fim"] = d.get('dataFimRecebimentoPropostas')
     except: pass
 
-    # 2. Varredura de Itens (tamanhoPagina=5000)
+    # 2. Varredura de Itens (Paginação larga para pegar tudo)
     url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens?pagina=1&tamanhoPagina=5000"
     try:
         ri = requests.get(url_itens, headers=HEADERS, verify=False, timeout=20)
@@ -84,7 +82,7 @@ def buscar_detalhes_e_itens(cnpj, ano, seq):
     except: pass
     return info
 
-# --- PROCESSO PRINCIPAL ---
+# --- PROCESSO ---
 banco_total = carregar_banco()
 data_atual = datetime(2025, 1, 1)
 
@@ -96,46 +94,41 @@ if data_atual > DATA_LIMITE_MAXIMA:
     print("✅ Sniper atualizado!")
     exit(0)
 
-print(f"🚀 Sniper Alvo CNPJ: {CNPJ_ALVO} | Data: {data_atual.strftime('%d/%m/%Y')}")
+print(f"🚀 Sniper Alvo (Resultados): {CNPJ_ALVO} | Data: {data_atual.strftime('%d/%m/%Y')}")
 
-# Buscamos todas as publicações do dia filtrando pelo CNPJ Alvo no campo niFornecedor
-data_str_api = data_atual.strftime('%Y-%m-%d')
+
+
+# BUSCA POR RESULTADOS (Onde a Drogafonte aparece com mais frequência)
+data_str = data_atual.strftime('%Y%m%d')
 pagina = 1
 while True:
-    url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-    # niFornecedor destrava a busca por resultados específicos desse CNPJ
-    params = {
-        "dataInicial": data_str_api, 
-        "dataFinal": data_str_api, 
-        "niFornecedor": CNPJ_ALVO, 
-        "pagina": pagina, 
-        "tamanhoPagina": 50
-    }
+    # Usamos o endpoint de resultados por CNPJ do fornecedor (niFornecedor)
+    url = f"https://pncp.gov.br/api/pncp/v1/resultados?dataSfi={data_str}&dataSff={data_str}&niFornecedor={CNPJ_ALVO}&pagina={pagina}&tamanhoPagina=50"
     
     try:
-        resp = requests.get(url, params=params, headers=HEADERS, verify=False, timeout=30)
+        resp = requests.get(url, headers=HEADERS, verify=False, timeout=30)
         if resp.status_code != 200: break
         
         json_resp = resp.json()
-        lics = json_resp.get('data', [])
-        if not lics: break
+        itens_vencidos = json_resp.get('data', [])
+        if not itens_vencidos: break
 
-        for c in lics:
-            cnpj_org = c.get('orgaoEntidade', {}).get('cnpj')
-            ano, seq = c.get('anoCompra'), c.get('sequencialCompra')
+        for item in itens_vencidos:
+            cnpj_org = item.get('orgaoCnpj')
+            ano, seq = item.get('anoCompra'), item.get('sequencialCompra')
             id_lic = f"{cnpj_org}-{ano}-{seq}"
             
             if id_lic not in banco_total:
-                # O Sniper entra na licitação para pegar todos os itens e objeto
+                # Busca cabeçalho e todos os itens da compra
                 detalhes = buscar_detalhes_e_itens(cnpj_org, ano, seq)
                 
                 banco_total[id_lic] = {
                     "IdPNCP": f"{cnpj_org}-1-{str(seq).zfill(6)}/{ano}",
-                    "Orgao": c.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "Municipio": c.get('unidadeOrgao', {}).get('municipioNome'),
-                    "UF": c.get('unidadeOrgao', {}).get('ufSigla'),
+                    "Orgao": item.get('orgaoRazaoSocial'),
+                    "Municipio": item.get('municipioNome'),
+                    "UF": item.get('ufSigla'),
                     "Objeto": detalhes["objeto"],
-                    "Status": c.get('situacaoNome', 'Homologada'),
+                    "Status": "Homologada",
                     "DtInicioPropostas": detalhes["inicio"],
                     "DtFimPropostas": detalhes["fim"],
                     "Link": f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}",
