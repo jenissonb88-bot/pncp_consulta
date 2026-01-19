@@ -5,7 +5,7 @@ import os
 import time
 import urllib3
 
-# Desativa avisos de SSL
+# Desativa avisos de SSL para garantir rodagem no GitHub Actions
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURAÇÃO ---
@@ -15,13 +15,13 @@ HEADERS = {
 }
 ARQ_DADOS = 'dados.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
+# Captura até o minuto atual da execução
 DATA_LIMITE_FINAL = datetime.now() 
 
-# Filtro ampliado de insumos de saúde
+# Filtros para garantir que a API não bloqueie a busca global
 TERMOS_BUSCA = [
     "medicamento", "material medico", "insumo hospitalar", 
-    "fralda", "absorvente", "alcool", "clorexidina", 
-    "seringa", "luva procedimento", "gaze", "soro fisiologico"
+    "fralda", "absorvente", "alcool", "clorexidina", "seringa"
 ]
 
 def carregar_banco():
@@ -38,10 +38,10 @@ def salvar_estado(banco, data_proxima):
         json.dump(list(banco.values()), f, indent=4, ensure_ascii=False)
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 Checkpoint: {data_proxima.strftime('%d/%m/%Y')} | Banco: {len(banco)} licitações")
+    print(f"\n💾 Checkpoint: {data_proxima.strftime('%d/%m/%Y')} | Banco: {len(banco)} registros")
 
 def processar_itens(cnpj, ano, seq):
-    """ Busca itens, vencedores e identifica status (Homologado, Deserto ou Fracassado) """
+    """ Varre todos os itens para identificar Homologados, Desertos ou Fracassados """
     url = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens?pagina=1&tamanhoPagina=500"
     itens_lista = []
     try:
@@ -54,7 +54,6 @@ def processar_itens(cnpj, ano, seq):
                     "Desc": it.get('descricao'),
                     "Status": "Divulgado",
                     "Vencedor": None,
-                    "CNPJ_Vencedor": None,
                     "Valor": float(it.get('valorUnitarioEstimado') or 0)
                 }
                 
@@ -64,19 +63,16 @@ def processar_itens(cnpj, ano, seq):
                     if r_res.status_code == 200:
                         resultados = r_res.json()
                         if isinstance(resultados, dict): resultados = [resultados]
-                        
                         for res in resultados:
-                            status_res = res.get('statusNome', 'Homologado')
-                            item_data["Status"] = status_res
+                            item_data["Status"] = res.get('statusNome', 'Homologado')
                             item_data["Vencedor"] = res.get('nomeRazaoSocialFornecedor')
-                            item_data["CNPJ_Vencedor"] = res.get('niFornecedor')
                             item_data["Valor"] = float(res.get('valorUnitarioHomologado') or item_data["Valor"])
                 
                 itens_lista.append(item_data)
         return itens_lista
     except: return []
 
-# --- INÍCIO ---
+# --- INÍCIO DO PROCESSO ---
 banco_total = carregar_banco()
 data_atual = datetime(2025, 1, 1)
 
@@ -84,17 +80,24 @@ if os.path.exists(ARQ_CHECKPOINT):
     with open(ARQ_CHECKPOINT, 'r') as f:
         data_atual = datetime.strptime(f.read().strip(), '%Y%m%d')
 
-print(f"🚀 Radar Global Saúde 2025: Ativado (Início: {data_atual.strftime('%d/%m/%Y')})")
+print(f"🚀 Radar Global Ativado | Início: {data_atual.strftime('%d/%m/%Y')} | Limite: Hoje")
 
 while data_atual <= DATA_LIMITE_FINAL:
     data_formatada = data_atual.strftime('%Y-%m-%d')
-    print(f"\n📅 {data_atual.strftime('%d/%m/%Y')}:", end=" ")
+    print(f"\n📅 {data_atual.strftime('%d/%m/%Y')}:", end=" ", flush=True)
     
     for termo in TERMOS_BUSCA:
         pagina = 1
         while True:
+            # Endpoint estável de contratações por termo
             url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-            params = {"dataInicial": data_formatada, "dataFinal": data_formatada, "termo": termo, "pagina": pagina, "tamanhoPagina": 50}
+            params = {
+                "dataInicial": data_formatada,
+                "dataFinal": data_formatada,
+                "termo": termo,
+                "pagina": pagina,
+                "tamanhoPagina": 50
+            }
             
             try:
                 r = requests.get(url, params=params, headers=HEADERS, verify=False, timeout=20)
@@ -113,7 +116,7 @@ while data_atual <= DATA_LIMITE_FINAL:
                     if id_lic not in banco_total:
                         itens = processar_itens(cnpj, ano, seq)
                         
-                        # Lógica de Status Geral
+                        # Inteligência de Status Geral
                         status_geral = c.get('situacaoNome', 'Divulgada')
                         if any(i['Status'] == 'Homologado' for i in itens): status_geral = "Homologada"
                         elif all(i['Status'] == 'Deserto' for i in itens) and itens: status_geral = "Deserta"
@@ -125,7 +128,7 @@ while data_atual <= DATA_LIMITE_FINAL:
                             "Orgao": c.get('orgaoEntidade', {}).get('razaoSocial'),
                             "Municipio": c.get('unidadeOrgao', {}).get('municipioNome'),
                             "UF": c.get('unidadeOrgao', {}).get('ufSigla'),
-                            "Objeto": c.get('objeto'), # ACRESCENTADO: Descrição completa do objeto
+                            "Objeto": c.get('objeto'),
                             "DtInicioPropostas": c.get('dataAberturaProposta'),
                             "DtFimPropostas": c.get('dataEncerramentoProposta'),
                             "Link": f"https://pncp.gov.br/app/editais/{cnpj}/{ano}/{seq}",
@@ -141,3 +144,5 @@ while data_atual <= DATA_LIMITE_FINAL:
     salvar_estado(banco_total, data_atual + timedelta(days=1))
     data_atual += timedelta(days=1)
     time.sleep(1)
+
+print(f"\n\n✅ Ciclo concluído com sucesso.")
