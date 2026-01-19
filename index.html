@@ -1,159 +1,255 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sniper PNCP 2025 - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .stats-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; }
-        .stats-card:hover { transform: translateY(-5px); }
-        .status-badge { border-radius: 20px; padding: 5px 15px; font-size: 0.85rem; }
-        .table-container { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <title>Consulta PNCP - Pregão Eletrônico</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold text-primary"><i class="fas fa-crosshairs"></i> Sniper PNCP Global 2025</h2>
-            <p class="text-muted">Monitorização em tempo real de resultados homologados</p>
-        </div>
-        <div id="last-update" class="badge bg-dark p-2">A carregar dados...</div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card bg-primary text-white p-3">
-                <div class="d-flex justify-content-between">
-                    <div><p class="mb-0">Total Licitações</p><h3 id="total-lic" class="fw-bold">0</h3></div>
-                    <i class="fas fa-file-contract fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-success text-white p-3">
-                <div class="d-flex justify-content-between">
-                    <div><p class="mb-0">Valor Total</p><h3 id="total-val" class="fw-bold">R$ 0</h3></div>
-                    <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-info text-white p-3">
-                <div class="d-flex justify-content-between">
-                    <div><p class="mb-0">Municípios</p><h3 id="total-mun" class="fw-bold">0</h3></div>
-                    <i class="fas fa-map-marker-alt fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-warning text-dark p-3">
-                <div class="d-flex justify-content-between">
-                    <div><p class="mb-0">Itens Ganhos</p><h3 id="total-itens" class="fw-bold">0</h3></div>
-                    <i class="fas fa-pills fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="table-container">
-        <table id="tabela-licitacoes" class="table table-hover w-100">
-            <thead class="table-light">
-                <tr>
-                    <th>Data Homologação</th>
-                    <th>Órgão / Município</th>
-                    <th>ID PNCP</th>
-                    <th>Início Propostas</th>
-                    <th>Fim Propostas</th>
-                    <th>Vencedor Principal</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-tabela">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
-<script>
-    // Função para formatar data ISO para BR
-    function formatarData(dataStr) {
-        if (!dataStr) return '<span class="text-danger">Pendente</span>';
-        const data = new Date(dataStr);
-        return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
     }
 
-    // Carregar o ficheiro dados.json
-    fetch('dados.json')
-        .then(response => response.json())
-        .then(data => {
-            let totalValor = 0;
-            let totalItens = 0;
-            const municipios = new Set();
+    header {
+      background-color: #003366;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+    }
 
-            const corpo = document.getElementById('corpo-tabela');
-            
-            data.forEach(lic => {
-                municipios.add(lic.Municipio);
-                let valorLic = 0;
-                let principalFornecedor = "";
+    main {
+      padding: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: #fff;
+    }
 
-                lic.Itens.forEach(it => {
-                    totalValor += it.Total;
-                    valorLic += it.Total;
-                    totalItens++;
-                    principalFornecedor = it.Vencedor || it.Fornecedor;
-                });
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
 
-                const row = `
-                    <tr>
-                        <td>${formatarData(lic.DataHomologacao)}</td>
-                        <td>
-                            <strong>${lic.Orgao}</strong><br>
-                            <small class="text-muted">${lic.Municipio}/${lic.UF}</small>
-                        </td>
-                        <td><code class="text-primary">${lic.IdPNCP || lic.Licitacao}</code></td>
-                        <td>${formatarData(lic.DtInicioPropostas)}</td>
-                        <td>${formatarData(lic.DtFimPropostas)}</td>
-                        <td><small>${principalFornecedor}</small></td>
-                        <td>
-                            <a href="${lic.Link}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-external-link-alt"></i> Portal
-                            </a>
-                        </td>
-                    </tr>
-                `;
-                corpo.innerHTML += row;
+    h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+
+    #status-carregamento {
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    #tabela-licitacoes {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    #tabela-licitacoes th,
+    #tabela-licitacoes td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    #tabela-licitacoes th {
+      background-color: #e0e6f0;
+      text-align: left;
+    }
+
+    .linha-licitacao {
+      background-color: #f0f4ff;
+      font-weight: bold;
+    }
+
+    .linha-item {
+      background-color: #fafafa;
+    }
+
+    .item-sem-resultado {
+      background-color: #ffe9e9;
+      color: #b30000;
+    }
+
+    .linha-totais {
+      background-color: #e9fbe9;
+      font-style: italic;
+    }
+
+    .situacao {
+      font-weight: bold;
+      margin-left: 4px;
+    }
+
+    a {
+      color: #003366;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      #tabela-licitacoes {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Consulta PNCP - Pregão Eletrônico</h1>
+  </header>
+
+  <main>
+    <h2>Licitações e Itens (CNPJ monitorado)</h2>
+    <div id="status-carregamento">Carregando dados do PNCP...</div>
+
+    <table id="tabela-licitacoes">
+      <thead>
+        <tr>
+          <th>Órgão/UASG</th>
+          <th>Nome do órgão</th>
+          <th>Nº Pregão</th>
+          <th>ID PNCP</th>
+          <th>Propostas (Início/Fim)</th>
+          <th>Cidade/UF</th>
+          <th>Objeto</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-tabela">
+        <!-- Linhas preenchidas via JavaScript -->
+      </tbody>
+    </table>
+  </main>
+
+  <script>
+    async function carregarDadosPncp() {
+      const status = document.getElementById('status-carregamento');
+      try {
+        const resp = await fetch('dados_pncp.json', { cache: 'no-store' });
+        if (!resp.ok) {
+          status.textContent = 'Não foi possível carregar o arquivo dados_pncp.json.';
+          console.error('Erro HTTP ao carregar dados_pncp.json:', resp.status);
+          return;
+        }
+
+        const licitacoes = await resp.json();
+        const corpo = document.getElementById('corpo-tabela');
+        corpo.innerHTML = '';
+
+        if (!Array.isArray(licitacoes) || licitacoes.length === 0) {
+          status.textContent = 'Nenhuma licitação encontrada para o período/critério configurado.';
+          return;
+        }
+
+        status.textContent = `Total de licitações encontradas: ${licitacoes.length}.`;
+
+        licitacoes.forEach(lic => {
+          // Linha principal da licitação
+          const trLic = document.createElement('tr');
+          trLic.classList.add('linha-licitacao');
+
+          const orgaoUasg = `${lic.orgao_codigo || ''} / ${lic.uasg || ''}`;
+          const periodo = `${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}`;
+          const cidadeUf = `${lic.cidade || ''}/${lic.uf || ''}`;
+
+          trLic.innerHTML = `
+            <td>${orgaoUasg}</td>
+            <td>${lic.orgao_nome || ''}</td>
+            <td>${lic.numero_pregao || ''}</td>
+            <td>
+              <a href="${lic.link_edital || '#'}" target="_blank" rel="noopener noreferrer">
+                ${lic.id_pncp || ''}
+              </a>
+            </td>
+            <td>${periodo}</td>
+            <td>${cidadeUf}</td>
+            <td>${lic.objeto || ''}</td>
+          `;
+          corpo.appendChild(trLic);
+
+          // Linhas dos itens
+          if (Array.isArray(lic.itens)) {
+            lic.itens.forEach(item => {
+              const trItem = document.createElement('tr');
+              trItem.classList.add('linha-item');
+
+              if (item.situacao === 'SemResultado') {
+                trItem.classList.add('item-sem-resultado');
+              }
+
+              trItem.innerHTML = `
+                <td colspan="2">
+                  Item ${item.numero_item || ''} - ${item.descricao || ''}
+                </td>
+                <td>${formatarData(item.data_homologacao)}</td>
+                <td>Qtd: ${item.quantidade ?? ''}</td>
+                <td>Unitário: ${formatarMoeda(item.valor_unitario)}</td>
+                <td>${item.fornecedor || ''}</td>
+                <td>
+                  Total: ${formatarMoeda(item.valor_total_item)}
+                  <span class="situacao">${item.situacao || ''}</span>
+                </td>
+              `;
+              corpo.appendChild(trItem);
+            });
+          }
+
+          // Linha de totais por fornecedor
+          if (Array.isArray(lic.totais_fornecedor) && lic.totais_fornecedor.length > 0) {
+            const trTotais = document.createElement('tr');
+            trTotais.classList.add('linha-totais');
+
+            const cel = document.createElement('td');
+            cel.colSpan = 7;
+
+            const partes = lic.totais_fornecedor.map(tf => {
+              return `${tf.fornecedor}: ${formatarMoeda(tf.valor_total_fornecedor)}`;
             });
 
-            // Atualizar Cartões
-            document.getElementById('total-lic').innerText = data.length;
-            document.getElementById('total-val').innerText = totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('total-mun').innerText = municipios.size;
-            document.getElementById('total-itens').innerText = totalItens;
-            document.getElementById('last-update').innerText = "Última Sincronização: " + new Date().toLocaleDateString();
-
-            // Inicializar DataTable
-            $('#tabela-licitacoes').DataTable({
-                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-                order: [[0, 'desc']],
-                pageLength: 10
-            });
-        })
-        .catch(err => {
-            console.error("Erro ao carregar dados.json:", err);
-            document.getElementById('corpo-tabela').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar o arquivo dados.json. Certifique-se de que ele existe.</td></tr>';
+            cel.textContent = 'Totais por fornecedor: ' + partes.join(' | ');
+            trTotais.appendChild(cel);
+            corpo.appendChild(trTotais);
+          }
         });
-</script>
+      } catch (e) {
+        const statusEl = document.getElementById('status-carregamento');
+        statusEl.textContent = 'Erro ao processar dados do PNCP.';
+        console.error('Erro ao processar dados PNCP:', e);
+      }
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return iso;
+        const dia = String(d.getDate()).padStart(2, '0');
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const ano = d.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+      } catch {
+        return iso;
+      }
+    }
+
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined || valor === '') return '';
+      const num = Number(valor);
+      if (isNaN(num)) return String(valor);
+      return num.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarDadosPncp);
+  </script>
 </body>
 </html>
