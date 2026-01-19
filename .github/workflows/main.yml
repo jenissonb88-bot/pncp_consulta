@@ -40,9 +40,9 @@ jobs:
           
           # Verifica se já existe checkpoint e lê
           if [ -f "checkpoint.txt" ]; then
-            echo "Checkpoint encontrado: $(cat checkpoint.txt)"
+            echo "✅ Checkpoint encontrado: $(cat checkpoint.txt)"
           else
-            echo "Sem checkpoint anterior, inicia do começo"
+            echo "⚠️ Sem checkpoint anterior, inicia do começo"
           fi
           
           # Executa coleta (usa checkpoint interno)
