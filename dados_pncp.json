@@ -1,1 +1,61 @@
-[]
+[
+  {
+    "id_pncp": "PNCP001",
+    "numero_pregao": "2025001",
+    "orgao_codigo": "SAUDE",
+    "orgao_nome": "Secretaria de Saúde",
+    "uasg": "001",
+    "objeto": "Fornecimento de medicamentos",
+    "cidade": "Recife",
+    "uf": "PE",
+    "data_inicio_propostas": "2025-01-01T00:00:00",
+    "data_fim_propostas": "2025-01-15T00:00:00",
+    "link_edital": "https://example.com/edital1",
+    "itens": [
+      {
+        "numero_item": "001",
+        "descricao": "Paracetamol 500mg",
+        "quantidade": 1000.0,
+        "valor_unitario": 0.5,
+        "valor_total_item": 500.0,
+        "fornecedor": "Empresa A",
+        "cnpj_fornecedor": "08778201000126",
+        "data_homologacao": "2025-01-20T00:00:00"
+      }
+    ],
+    "itens_todos_fornecedores": [],
+    "data_atualizacao": "2026-01-19T23:42:14.992093"
+  },
+  {
+    "id_pncp": "PNCP002",
+    "numero_pregao": null,
+    "orgao_codigo": "EDUCACAO",
+    "orgao_nome": "Órgão desconhecido",
+    "uasg": "",
+    "objeto": "",
+    "cidade": "",
+    "uf": "",
+    "data_inicio_propostas": null,
+    "data_fim_propostas": null,
+    "link_edital": "#",
+    "itens": [],
+    "itens_todos_fornecedores": [],
+    "data_atualizacao": "2026-01-19T23:42:14.992185"
+  },
+  {
+    "id_pncp": "PNCP003",
+    "numero_pregao": "2025003",
+    "orgao_codigo": "ADMIN",
+    "orgao_nome": "Administração",
+    "uasg": "",
+    "objeto": "Fornecimento de papel A4",
+    "cidade": "",
+    "uf": "",
+    "data_inicio_propostas": null,
+    "data_fim_propostas": null,
+    "link_edital": "#",
+    "itens": [],
+    "itens_todos_fornecedores": [],
+    "data_atualizacao": "2026-01-19T23:42:14.992300"
+  }
+]
