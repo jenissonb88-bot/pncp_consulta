@@ -529,25 +529,356 @@
     let dadosFiltrados = [];
     let paginaAtual = 1;
 
+    // ===== CACHE SYSTEM =====
+    const CACHE_KEY = 'pncp_dados_cache';
+    const CACHE_TIMESTAMP_KEY = 'pncp_cache_timestamp';
+    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+    const idIndexMap = new Map(); // Map rápido por ID para deduplicação
+
+    function obterCacheLocal() {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        
+        if (!cached || !timestamp) return null;
+
+        const age = Date.now() - parseInt(timestamp, 10);
+        if (age > CACHE_TTL) {
+          // Cache expirado
+          localStorage.removeItem(CACHE_KEY);
+          localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+          return null;
+        }
+
+        return JSON.parse(cached);
+      } catch (e) {
+        console.warn('Erro ao ler cache:', e);
+        return null;
+      }
+    }
+
+    function salvarCacheLocal(dados) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(dados));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      } catch (e) {
+        console.warn('Erro ao salvar cache:', e);
+      }
+    }
+
+    function deduplica(dados) {
+      // Remove duplicatas usando Map por ID único
+      const dedupMap = new Map();
+
+      dados.forEach(lic => {
+        const chaveUnica = `${lic.id_pncp}_${lic.numero_pregao}_${lic.orgao_codigo}`;
+        if (!dedupMap.has(chaveUnica)) {
+          dedupMap.set(chaveUnica, lic);
+        } else {
+          // Se já existe, mescla dados (atualiza se mais recente)
+          const existente = dedupMap.get(chaveUnica);
+          if (lic.data_atualizacao > existente.data_atualizacao) {
+            dedupMap.set(chaveUnica, lic);
+          }
+        }
+      });
+
+      return Array.from(dedupMap.values());
+    }
+
+    function mesclaCacheComNovos(cacheAntigo, dadosNovos) {
+      // Cria mapa do cache antigo
+      const mapaAntigo = new Map();
+      cacheAntigo.forEach(lic => {
+        const chave = `${lic.id_pncp}_${lic.numero_pregao}`;
+        mapaAntigo.set(chave, lic);
+      });
+
+      // Atualiza com novos dados (substitui se chave existe)
+      const resultado = cacheAntigo.slice();
+      dadosNovos.forEach(novoLic => {
+        const chave = `${novoLic.id_pncp}_${novoLic.numero_pregao}`;
+        const idx = resultado.findIndex(l => {
+          const chaveExistente = `${l.id_pncp}_${l.numero_pregao}`;
+          return chaveExistente === chave;
+        });
+
+        if (idx >= 0) {
+          // Já existe, atualiza
+          resultado[idx] = novoLic;
+        } else {
+          // Novo, adiciona
+          resultado.push(novoLic);
+        }
+      });
+
+      return deduplica(resultado);
+    }
+
     async function carregarDadosPncp() {
       const status = document.getElementById('status');
+      
+      // Tentar carregar do cache primeiro
+      const cacheLocal = obterCacheLocal();
+      if (cacheLocal && cacheLocal.length > 0) {
+        status.textContent = `✓ Cache carregado (${cacheLocal.length} licitações). Verificando atualizações...`;
+        status.className = 'status-success';
+        
+        dadosCompletos = cacheLocal;
+        dadosFiltrados = dadosCompletos.slice();
+        preencherFiltroUF();
+        paginaAtual = 1;
+        atualizarTabela();
+
+        // Atualizar em background
+        atualizarDadosEmBackground(cacheLocal);
+        return;
+      }
+
+      // Sem cache, carregar normalmente
       status.textContent = 'Carregando dados do PNCP...';
       status.className = 'status-loading';
 
       try {
         const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        dadosCompletos = await resp.json();
+        const dados = await resp.json();
+        
+        // Deduplicar antes de salvar
+        dadosCompletos = deduplica(dados);
+        salvarCacheLocal(dadosCompletos);
+        
         dadosFiltrados = dadosCompletos.slice();
         preencherFiltroUF();
         paginaAtual = 1;
         atualizarTabela();
-        status.textContent = 'Dados carregados com sucesso.';
+        
+        status.textContent = `✓ Dados carregados com sucesso (${dadosCompletos.length} licitações).`;
         status.className = 'status-success';
       } catch (e) {
         status.textContent = 'Erro ao carregar: ' + e.message;
         status.className = 'status-error';
       }
+    }
+
+    async function atualizarDadosEmBackground(cacheAntigo) {
+      try {
+        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) return;
+        
+        const dadosNovos = await resp.json();
+        const mesclado = mesclaCacheComNovos(cacheAntigo, dadosNovos);
+        
+        if (mesclado.length > cacheAntigo.length) {
+          // Teve novos dados
+          dadosCompletos = mesclado;
+          salvarCacheLocal(mesclado);
+          
+          const status = document.getElementById('status');
+          status.textContent = `✓ Cache atualizado (+${mesclado.length - cacheAntigo.length} novos).`;
+          status.className = 'status-success';
+          
+          // Atualizar tabela se necessário
+          aplicarFiltros();
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar em background:', e);
+      }
+    }
+
+    // Botão para limpar cache manualmente
+    function adicionarBotaoLimparCache() {
+      const controlsGroup = document.createElement('div');
+      controlsGroup.className = 'controls-group';
+      
+      const btnLimpar = document.createElement('button');
+      btnLimpar.className = 'btn-secondary';
+      btnLimpar.textContent = '🔄 Atualizar Cache';
+      btnLimpar.style.fontSize = '0.75rem';
+      btnLimpar.addEventListener('click', () => {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+        location.reload();
+      });
+      
+      controlsGroup.appendChild(btnLimpar);
+      document.querySelector('.controls').appendChild(controlsGroup);
+    }
+
+    // ===== CACHE SYSTEM =====
+    const CACHE_KEY = 'pncp_dados_cache';
+    const CACHE_TIMESTAMP_KEY = 'pncp_cache_timestamp';
+    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+    const idIndexMap = new Map(); // Map rápido por ID para deduplicação
+
+    function obterCacheLocal() {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        
+        if (!cached || !timestamp) return null;
+
+        const age = Date.now() - parseInt(timestamp, 10);
+        if (age > CACHE_TTL) {
+          // Cache expirado
+          localStorage.removeItem(CACHE_KEY);
+          localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+          return null;
+        }
+
+        return JSON.parse(cached);
+      } catch (e) {
+        console.warn('Erro ao ler cache:', e);
+        return null;
+      }
+    }
+
+    function salvarCacheLocal(dados) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(dados));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+      } catch (e) {
+        console.warn('Erro ao salvar cache:', e);
+      }
+    }
+
+    function deduplica(dados) {
+      // Remove duplicatas usando Map por ID único
+      const dedupMap = new Map();
+
+      dados.forEach(lic => {
+        const chaveUnica = `${lic.id_pncp}_${lic.numero_pregao}_${lic.orgao_codigo}`;
+        if (!dedupMap.has(chaveUnica)) {
+          dedupMap.set(chaveUnica, lic);
+        } else {
+          // Se já existe, mescla dados (atualiza se mais recente)
+          const existente = dedupMap.get(chaveUnica);
+          if (lic.data_atualizacao > existente.data_atualizacao) {
+            dedupMap.set(chaveUnica, lic);
+          }
+        }
+      });
+
+      return Array.from(dedupMap.values());
+    }
+
+    function mesclaCacheComNovos(cacheAntigo, dadosNovos) {
+      // Cria mapa do cache antigo
+      const mapaAntigo = new Map();
+      cacheAntigo.forEach(lic => {
+        const chave = `${lic.id_pncp}_${lic.numero_pregao}`;
+        mapaAntigo.set(chave, lic);
+      });
+
+      // Atualiza com novos dados (substitui se chave existe)
+      const resultado = cacheAntigo.slice();
+      dadosNovos.forEach(novoLic => {
+        const chave = `${novoLic.id_pncp}_${novoLic.numero_pregao}`;
+        const idx = resultado.findIndex(l => {
+          const chaveExistente = `${l.id_pncp}_${l.numero_pregao}`;
+          return chaveExistente === chave;
+        });
+
+        if (idx >= 0) {
+          // Já existe, atualiza
+          resultado[idx] = novoLic;
+        } else {
+          // Novo, adiciona
+          resultado.push(novoLic);
+        }
+      });
+
+      return deduplica(resultado);
+    }
+
+    async function carregarDadosPncp() {
+      const status = document.getElementById('status');
+      
+      // Tentar carregar do cache primeiro
+      const cacheLocal = obterCacheLocal();
+      if (cacheLocal && cacheLocal.length > 0) {
+        status.textContent = `✓ Cache carregado (${cacheLocal.length} licitações). Verificando atualizações...`;
+        status.className = 'status-success';
+        
+        dadosCompletos = cacheLocal;
+        dadosFiltrados = dadosCompletos.slice();
+        preencherFiltroUF();
+        paginaAtual = 1;
+        atualizarTabela();
+
+        // Atualizar em background
+        atualizarDadosEmBackground(cacheLocal);
+        return;
+      }
+
+      // Sem cache, carregar normalmente
+      status.textContent = 'Carregando dados do PNCP...';
+      status.className = 'status-loading';
+
+      try {
+        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const dados = await resp.json();
+        
+        // Deduplicar antes de salvar
+        dadosCompletos = deduplica(dados);
+        salvarCacheLocal(dadosCompletos);
+        
+        dadosFiltrados = dadosCompletos.slice();
+        preencherFiltroUF();
+        paginaAtual = 1;
+        atualizarTabela();
+        
+        status.textContent = `✓ Dados carregados com sucesso (${dadosCompletos.length} licitações).`;
+        status.className = 'status-success';
+      } catch (e) {
+        status.textContent = 'Erro ao carregar: ' + e.message;
+        status.className = 'status-error';
+      }
+    }
+
+    async function atualizarDadosEmBackground(cacheAntigo) {
+      try {
+        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) return;
+        
+        const dadosNovos = await resp.json();
+        const mesclado = mesclaCacheComNovos(cacheAntigo, dadosNovos);
+        
+        if (mesclado.length > cacheAntigo.length) {
+          // Teve novos dados
+          dadosCompletos = mesclado;
+          salvarCacheLocal(mesclado);
+          
+          const status = document.getElementById('status');
+          status.textContent = `✓ Cache atualizado (+${mesclado.length - cacheAntigo.length} novos).`;
+          status.className = 'status-success';
+          
+          // Atualizar tabela se necessário
+          aplicarFiltros();
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar em background:', e);
+      }
+    }
+
+    // Botão para limpar cache manualmente
+    function adicionarBotaoLimparCache() {
+      const controlsGroup = document.createElement('div');
+      controlsGroup.className = 'controls-group';
+      
+      const btnLimpar = document.createElement('button');
+      btnLimpar.className = 'btn-secondary';
+      btnLimpar.textContent = '🔄 Atualizar Cache';
+      btnLimpar.style.fontSize = '0.75rem';
+      btnLimpar.addEventListener('click', () => {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+        location.reload();
+      });
+      
+      controlsGroup.appendChild(btnLimpar);
+      document.querySelector('.controls').appendChild(controlsGroup);
     }
 
     function preencherFiltroUF() {
@@ -878,7 +1209,10 @@
       });
     });
 
-    document.addEventListener('DOMContentLoaded', carregarDadosPncp);
+    document.addEventListener('DOMContentLoaded', () => {
+      adicionarBotaoLimparCache();
+      carregarDadosPncp();
+    });
   </script>
 </body>
 </html>
