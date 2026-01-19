@@ -5,7 +5,6 @@ import os
 import time
 import urllib3
 
-# Desativa avisos de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURAÇÃO ---
@@ -15,6 +14,7 @@ HEADERS = {
 }
 ARQ_DADOS = 'dados.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
+# O limite é sempre o momento da execução
 DATA_LIMITE_FINAL = datetime.now() 
 
 def carregar_banco():
@@ -33,37 +33,21 @@ def salvar_estado(banco, data_proxima):
         f.write(data_proxima.strftime('%Y%m%d'))
     print(f"\n💾 Checkpoint: {data_proxima.strftime('%d/%m/%Y')} | Banco: {len(banco)} registros")
 
-def buscar_vencedores_itens(cnpj, ano, seq):
-    """ Busca os itens e seus respectivos vencedores dentro da compra """
-    url = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens?pagina=1&tamanhoPagina=100"
-    lista_itens = []
+def buscar_detalhes_compra(cnpj, ano, seq):
+    """ Busca as datas de recebimento de proposta (Início e Fim) """
+    url = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}"
     try:
-        r = requests.get(url, headers=HEADERS, verify=False, timeout=15)
+        r = requests.get(url, headers=HEADERS, verify=False, timeout=10)
         if r.status_code == 200:
-            itens_json = r.json()
-            for it in itens_json:
-                if it.get('temResultado'):
-                    num_item = it.get('numeroItem')
-                    # Busca o resultado do item específico
-                    url_res = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{str(seq).zfill(6)}/itens/{num_item}/resultados"
-                    r_res = requests.get(url_res, headers=HEADERS, verify=False, timeout=10)
-                    if r_res.status_code == 200:
-                        res_data = r_res.json()
-                        if isinstance(res_data, dict): res_data = [res_data]
-                        for res in res_data:
-                            lista_itens.append({
-                                "Item": num_item,
-                                "Desc": it.get('descricao'),
-                                "Vencedor": res.get('nomeRazaoSocialFornecedor'),
-                                "CNPJ_Vencedor": res.get('niFornecedor'),
-                                "Qtd": res.get('quantidadeHomologada'),
-                                "Total": float(res.get('valorTotalHomologado') or 0),
-                                "DataHomologacao": res.get('dataHomologacao')
-                            })
-        return lista_itens
-    except: return []
+            d = r.json()
+            return {
+                "inicio": d.get('dataInicioRecebimentoPropostas') or d.get('dataAberturaProposta'),
+                "fim": d.get('dataFimRecebimentoPropostas') or d.get('dataEncerramentoProposta'),
+                "id_pncp": f"{cnpj}-1-{str(seq).zfill(6)}/{ano}"
+            }
+    except: return None
 
-# --- PROCESSO PRINCIPAL ---
+# --- PROCESSO ---
 banco_total = carregar_banco()
 data_atual = datetime(2025, 1, 1)
 
@@ -71,59 +55,71 @@ if os.path.exists(ARQ_CHECKPOINT):
     with open(ARQ_CHECKPOINT, 'r') as f:
         data_atual = datetime.strptime(f.read().strip(), '%Y%m%d')
 
-print(f"🚀 Sniper Global: Iniciando busca por Contratações (Limite: {DATA_LIMITE_FINAL.strftime('%d/%m/%Y')})")
+print(f"🚀 Sniper Global: Capturando resultados homologados até {DATA_LIMITE_FINAL.strftime('%d/%m/%Y')}...")
+
+
 
 while data_atual <= DATA_LIMITE_FINAL:
-    # Usamos o formato YYYY-MM-DD que é o padrão da API de consulta
-    data_formatada = data_atual.strftime('%Y-%m-%d')
+    # IMPORTANTE: A API de resultados usa o parâmetro dataSfi/dataSff para data de inclusão
+    data_str = data_atual.strftime('%Y%m%d')
     print(f"\n📅 {data_atual.strftime('%d/%m/%Y')}:", end=" ")
     
     pagina = 1
     while True:
-        # Endpoint de consulta de contratações (mais estável que o de resultados direto)
-        url_busca = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = {
-            "dataInicial": data_formatada,
-            "dataFinal": data_formatada,
-            "pagina": pagina,
-            "tamanhoPagina": 50
-        }
+        # Endpoint de RESULTADOS DE ITENS (O mais preciso para capturar vencedores)
+        url = f"https://pncp.gov.br/api/pncp/v1/resultados?dataSfi={data_str}&dataSff={data_str}&pagina={pagina}&tamanhoPagina=50"
         
         try:
-            r = requests.get(url_busca, params=params, headers=HEADERS, verify=False, timeout=20)
+            r = requests.get(url, headers=HEADERS, verify=False, timeout=25)
             if r.status_code != 200: break
             
-            data_json = r.json()
-            contratacoes = data_json.get('data', [])
-            if not contratacoes: break
+            res_json = r.json()
+            itens_vencidos = res_json.get('data', [])
+            
+            if not itens_vencidos: break
 
-            for c in contratacoes:
-                cnpj_org = c.get('orgaoEntidade', {}).get('cnpj')
-                ano = c.get('anoCompra')
-                seq = c.get('sequencialCompra')
+            for item in itens_vencidos:
+                cnpj_org = item.get('orgaoCnpj')
+                ano = item.get('anoCompra')
+                seq = item.get('sequencialCompra')
                 id_lic = f"{cnpj_org}-{ano}-{seq}"
 
+                # Se a licitação é nova, cria o cabeçalho
                 if id_lic not in banco_total:
-                    vencidos = buscar_vencedores_itens(cnpj_org, ano, seq)
-                    # Só adicionamos ao banco se houver itens com resultado homologado
-                    if vencidos:
-                        banco_total[id_lic] = {
-                            "IdPNCP": f"{cnpj_org}-1-{str(seq).zfill(6)}/{ano}",
-                            "DtInicioPropostas": c.get('dataAberturaProposta'),
-                            "DtFimPropostas": c.get('dataEncerramentoProposta'),
-                            "Orgao": c.get('orgaoEntidade', {}).get('razaoSocial'),
-                            "Municipio": c.get('unidadeOrgao', {}).get('municipioNome'),
-                            "UF": c.get('unidadeOrgao', {}).get('ufSigla'),
-                            "Edital": c.get('numeroCompra'),
-                            "Link": f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}",
-                            "Licitacao": id_lic,
-                            "Itens": vencidos
-                        }
-                        print("🎯", end="", flush=True)
+                    # Double Fetch para pegar datas de proposta e ID formatado
+                    detalhes = buscar_detalhes_compra(cnpj_org, ano, seq)
+                    
+                    banco_total[id_lic] = {
+                        "IdPNCP": detalhes['id_pncp'] if detalhes else id_lic,
+                        "DataHomologacao": item.get('dataHomologacao'),
+                        "DtInicioPropostas": detalhes['inicio'] if detalhes else None,
+                        "DtFimPropostas": detalhes['fim'] if detalhes else None,
+                        "Orgao": item.get('orgaoRazaoSocial'),
+                        "Municipio": item.get('municipioNome'),
+                        "UF": item.get('ufSigla'),
+                        "Edital": item.get('numeroCompra'),
+                        "Link": f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{str(seq).zfill(6)}",
+                        "Licitacao": id_lic,
+                        "Itens": []
+                    }
 
-            if pagina >= data_json.get('totalPaginas', 1): break
+                # Adiciona o item vencedor à lista (evita duplicar o mesmo item)
+                if not any(x['Item'] == item.get('numeroItem') for x in banco_total[id_lic]["Itens"]):
+                    banco_total[id_lic]["Itens"].append({
+                        "Item": item.get('numeroItem'),
+                        "Desc": item.get('descricaoItem'),
+                        "Vencedor": item.get('nomeRazaoSocialFornecedor'),
+                        "CNPJ_Vencedor": item.get('niFornecedor'),
+                        "Qtd": item.get('quantidadeHomologada'),
+                        "Total": float(item.get('valorTotalHomologado') or 0)
+                    })
+                    print("🎯", end="", flush=True)
+
+            if pagina >= res_json.get('totalPaginas', 1): break
             pagina += 1
-        except: break
+        except Exception as e:
+            print(f" [Aviso: {e}] ", end="")
+            break
 
     salvar_estado(banco_total, data_atual + timedelta(days=1))
     data_atual += timedelta(days=1)
