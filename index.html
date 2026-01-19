@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <style>
-    /* [MESMOS ESTILOS DA VERSÃO ANTERIOR + MODAL] */
     :root {
       --primary: #1e40af;
       --primary-dark: #1e3a8a;
@@ -20,228 +19,124 @@
       --border: #e2e8f0;
     }
 
-    /* [TODOS OS ESTILOS ANTERIORES permanecem iguais...] */
-    
-    /* NOVO: Modal de itens */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
+    * { box-sizing: border-box; }
 
-    .modal-content {
-      background-color: var(--card);
-      margin: 5% auto;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--bg) 0%, #e2e8f0 100%);
+      margin: 0;
       padding: 0;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 1000px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      color: var(--text);
+      line-height: 1.6;
     }
 
-    .modal-header {
-      padding: 20px 24px;
-      background: var(--primary);
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
-      border-radius: 12px 12px 0 0;
+      padding: 2rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 25px rgba(30, 64, 175, 0.3);
+    }
+
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.2rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      opacity: 0.95;
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--primary);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .stat-label {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin: 0.5rem 0 0 0;
+    }
+
+    .controls {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
       align-items: center;
     }
 
-    .close {
-      color: white;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-      background: none;
-      border: none;
+    .search-box {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
     }
 
-    .close:hover {
-      opacity: 0.7;
-    }
-
-    .itens-table {
+    .search-box input {
       width: 100%;
-      border-collapse: collapse;
+      padding: 12px 16px 12px 45px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: all 0.3s;
     }
 
-    .itens-table th,
-    .itens-table td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
     }
 
-    .itens-table th {
-      background: #f8fafc;
-      font-weight: 600;
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
     }
 
-    .btn-expand {
-      background: none;
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 10px 20px;
       border: none;
-      color: var(--primary);
+      border-radius: 8px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px 8px;
-      border-radius: 6px;
       transition: all 0.2s;
-    }
-
-    .btn-expand:hover {
-      background: rgba(30,64,175,0.1);
-    }
-
-    /* [resto dos estilos permanece igual] */
-    body { /* ... mesmos estilos ... */ }
-    /* ... */
-  </style>
-</head>
-<body>
-  <!-- [MESMA ESTRUTURA HEADER/STATS/CONTROLS/CHARTS] -->
-  
-  <div class="container">
-    <!-- Header, stats, controls, charts [iguais à versão anterior] -->
-    
-    <div class="table-container">
-      <table id="tabela-licitacoes">
-        <thead>
-          <tr>
-            <th>Órgão/UASG</th>
-            <th>Órgão</th>
-            <th>Pregão</th>
-            <th>ID PNCP</th>
-            <th>Período</th>
-            <th>Cidade/UF</th>
-            <th>Objeto</th>
-            <th>Itens</th>  <!-- NOVA COLUNA -->
-          </tr>
-        </thead>
-        <tbody id="corpo-tabela"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- NOVO MODAL DE ITENS -->
-  <div id="modal-itens" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modal-titulo">Itens da Licitação</h2>
-        <button class="close" onclick="fecharModal()">&times;</button>
-      </div>
-      <div class="modal-body" id="modal-body">
-        <!-- Conteúdo dos itens aqui -->
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // [FUNÇÕES ANTERIORES permanecem iguais...]
-
-    function criarLinhaLicitacao(lic, index) {
-      const tr = document.createElement('tr');
-      tr.className = 'linha-licitacao';
-      tr.dataset.index = index;  // para abrir modal
-      
-      const orgaoUasg = `${lic.orgao_codigo || ''}/${lic.uasg || ''}`;
-      const periodo = `${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}`;
-      const qtdItens = lic.itens?.length || 0;
-      
-      tr.innerHTML = `
-        <td>${orgaoUasg}</td>
-        <td>${lic.orgao_nome || ''}</td>
-        <td>${lic.numero_pregao || ''}</td>
-        <td><a href="${lic.link_edital || '#'}" target="_blank">${lic.id_pncp || ''}</a></td>
-        <td>${periodo}</td>
-        <td>${lic.cidade || ''}/${lic.uf || ''}</td>
-        <td>${lic.objeto?.substring(0, 60)}${lic.objeto?.length > 60 ? '...' : ''}</td>
-        <td>
-          <button class="btn-expand" onclick="abrirModalItens(${index})">
-            📋 ${qtdItens} item${qtdItens !== 1 ? 's' : ''}
-          </button>
-        </td>
-      `;
-      return tr;
-    }
-
-    // NOVA FUNÇÃO: Modal de itens
-    function abrirModalItens(index) {
-      const lic = dadosFiltrados[index];
-      if (!lic || !lic.itens) return;
-      
-      document.getElementById('modal-titulo').textContent = 
-        `Itens - ${lic.numero_pregao} (${lic.orgao_nome})`;
-      
-      const body = document.getElementById('modal-body');
-      let html = `
-        <table class="itens-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Descrição</th>
-              <th>Data Homolog.</th>
-              <th>Qtd</th>
-              <th>Unit. (R$)</th>
-              <th>Total (R$)</th>
-              <th>Fornecedor</th>
-              <th>Situação</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      
-      lic.itens.forEach(item => {
-        const situacao = item.situacao === 'Venceu' ? 
-          '<span class="badge badge-venceu">✅ Venceu</span>' : 
-          '<span class="badge badge-sem">⚠️ ' + (item.situacao || 'Sem resultado') + '</span>';
-          
-        html += `
-          <tr>
-            <td>${item.numero_item || ''}</td>
-            <td>${item.descricao || ''}</td>
-            <td>${formatarData(item.data_homologacao)}</td>
-            <td>${item.quantidade || ''}</td>
-            <td class="valor">${formatarMoeda(item.valor_unitario)}</td>
-            <td class="valor">${formatarMoeda(item.valor_total_item)}</td>
-            <td>${item.fornecedor || '-'}</td>
-            <td>${situacao}</td>
-          </tr>
-        `;
-      });
-      
-      html += '</tbody></table>';
-      body.innerHTML = html;
-      
-      document.getElementById('modal-itens').style.display = 'block';
-    }
-
-    function fecharModal() {
-      document.getElementById('modal-itens').style.display = 'none';
-    }
-
-    // Fecha modal clicando fora
-    window.onclick = function(event) {
-      const modal = document.getElementById('modal-itens');
-      if (event.target === modal) {
-        fecharModal();
-      }
-    }
-
-    // ESC fecha modal
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') fecharModal();
-    });
-
-    // [resto das funções permanece igual]
-  </script>
-</body>
-</html>
+      text-decoration:
