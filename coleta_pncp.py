@@ -5,7 +5,7 @@ import os
 import time
 import urllib3
 
-# Desativa avisos de SSL para evitar erros de certificado no GitHub Actions/Ambiente local
+# Desativa avisos de SSL para evitar erros de certificado
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURAÇÃO ---
@@ -15,21 +15,20 @@ HEADERS = {
 }
 ARQ_DADOS = 'dados.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
-DATA_LIMITE_FINAL = datetime(2025, 12, 31)
+
+# AJUSTE: O limite agora é sempre o dia atual (hoje)
+DATA_LIMITE_FINAL = datetime.now() 
 
 def carregar_banco():
-    """Carrega o JSON existente e cria um índice por ID de Licitação"""
     if os.path.exists(ARQ_DADOS):
         try:
             with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
                 dados = json.load(f)
-                # Chave única por licitação para evitar duplicados
                 return {i['Licitacao']: i for i in dados}
         except: pass
     return {}
 
 def salvar_estado(banco, data_proxima):
-    """Salva os dados coletados e atualiza o checkpoint"""
     with open(ARQ_DADOS, 'w', encoding='utf-8') as f:
         json.dump(list(banco.values()), f, indent=4, ensure_ascii=False)
     with open(ARQ_CHECKPOINT, 'w') as f:
@@ -63,7 +62,7 @@ if os.path.exists(ARQ_CHECKPOINT):
     with open(ARQ_CHECKPOINT, 'r') as f:
         data_atual = datetime.strptime(f.read().strip(), '%Y%m%d')
 
-print(f"🚀 Sniper PNCP 2025: Captura Global Iniciada...")
+print(f"🚀 Sniper PNCP: Captura Global Iniciada (Limite: {DATA_LIMITE_FINAL.strftime('%d/%m/%Y')})")
 
 
 
@@ -73,7 +72,7 @@ while data_atual <= DATA_LIMITE_FINAL:
     
     pagina = 1
     while True:
-        # Endpoint de resultados GERAIS (sem filtro de CNPJ de fornecedor)
+        # Consulta geral de resultados
         url_res = f"https://pncp.gov.br/api/pncp/v1/resultados?dataSfi={data_str}&dataSff={data_str}&pagina={pagina}&tamanhoPagina=50"
         
         try:
@@ -89,16 +88,15 @@ while data_atual <= DATA_LIMITE_FINAL:
                     cnpj_org = it.get('orgaoCnpj')
                     ano = it.get('anoCompra')
                     seq = it.get('sequencialCompra')
-                    # ID de controle interno
                     id_lic = f"{cnpj_org}-{ano}-{seq}"
 
                     if id_lic not in banco_total:
-                        # Segunda consulta para enriquecer os dados (Datas e ID oficial)
+                        # Double Fetch para pegar datas de proposta e ID PNCP oficial
                         detalhes = buscar_detalhes_edital(cnpj_org, ano, seq)
                         
                         banco_total[id_lic] = {
                             "IdPNCP": detalhes['id_oficial'] if detalhes else id_lic,
-                            "DataHomologacao": it.get('dataHomologacao'), # Extraído do HTML (Data do resultado)
+                            "DataHomologacao": it.get('dataHomologacao'), # Campo extraído do HTML que você enviou
                             "DtInicioPropostas": detalhes['inicio'] if detalhes else None,
                             "DtFimPropostas": detalhes['fim'] if detalhes else None,
                             "Orgao": it.get('orgaoRazaoSocial'),
@@ -110,7 +108,7 @@ while data_atual <= DATA_LIMITE_FINAL:
                             "Itens": []
                         }
 
-                    # Adiciona os itens e os respetivos fornecedores vencedores
+                    # Registra o item e o vencedor (mesmo que a licitação já exista, pode ter novos itens)
                     banco_total[id_lic]["Itens"].append({
                         "Item": it.get('numeroItem'),
                         "Desc": it.get('descricaoItem'),
@@ -127,9 +125,11 @@ while data_atual <= DATA_LIMITE_FINAL:
             pagina += 1
         except: break
     
-    # Salva o estado ao final de cada dia processado
+    # Salva o estado e avança o dia
     salvar_estado(banco_total, data_atual + timedelta(days=1))
     data_atual += timedelta(days=1)
-    time.sleep(1) # Pausa amigável para evitar bloqueios
+    
+    # Pequena pausa para respeitar o servidor do governo
+    time.sleep(0.5)
 
-print(f"\n\n✅ Processamento concluído!")
+print(f"\n\n✅ Coleta atualizada até hoje!")
