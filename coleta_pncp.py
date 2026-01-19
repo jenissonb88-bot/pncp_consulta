@@ -178,43 +178,48 @@ while data_atual <= data_fim:
                                 # CAPTURA COMPLETA: TODOS OS FORNECEDORES
                                 # ========================================
                                 for v in vends:
-                                    fornecedor_cnpj = v.get('niFornecedor') or ''
-                                    fornecedor_nome = v.get('nomeRazaoSocialFornecedor') or 'Sem identificação'
-                                    
-                                    qtd = v.get('quantidadeHomologada') or 0
-                                    unit = float(v.get('valorUnitarioHomologado') or 0)
-                                    tot = float(v.get('valorTotalHomologado') or qtd * unit)
-                                    data_homolog = v.get('dataHomologacao') or lic.get('dataAtualizacao')
-
-                                    # Registro completo com todos os dados do item
-                                    item_reg = {
-                                        "numero_item": numero_item,
-                                        "descricao": descricao_item,
-                                        "data_homologacao": data_homolog,
-                                        "quantidade": qtd,
-                                        "valor_unitario": unit,
-                                        "valor_total_item": tot,
-                                        "fornecedor": fornecedor_nome,
-                                        "cnpj_fornecedor": fornecedor_cnpj,
-                                        "situacao": "Venceu"
-                                    }
-
-                                    # Adiciona a TODOS os fornecedores
-                                    chave_item = f"{numero_item}-{fornecedor_cnpj}"
-                                    if not any(x['numero_item'] == numero_item and x['cnpj_fornecedor'] == fornecedor_cnpj for x in itens_todos):
-                                        itens_todos.append(item_reg)
-                                        print("✅", end="", flush=True)
-
-                                    # Se for nosso CNPJ, adiciona também à seção específica
-                                    cv_clean = (fornecedor_cnpj or "").replace(".", "").replace("/", "").replace("-", "")
-                                    if CNPJ_ALVO in cv_clean:
-                                        if not any(x['numero_item'] == numero_item for x in itens_licitacao):
-                                            itens_licitacao.append(item_reg)
+                                    try:
+                                        fornecedor_cnpj = v.get('niFornecedor') or ''
+                                        fornecedor_nome = v.get('nomeRazaoSocialFornecedor') or 'Sem identificação'
                                         
-                                        # Atualiza resumo por fornecedor (seu)
-                                        if fornecedor_nome not in resumo:
-                                            resumo[fornecedor_nome] = 0
-                                        resumo[fornecedor_nome] += tot
+                                        qtd = v.get('quantidadeHomologada') or 0
+                                        unit = float(v.get('valorUnitarioHomologado') or 0)
+                                        tot = float(v.get('valorTotalHomologado') or qtd * unit)
+                                        data_homolog = v.get('dataHomologacao') or lic.get('dataAtualizacao')
+
+                                        # Registro completo com todos os dados do item
+                                        item_reg = {
+                                            "numero_item": numero_item,
+                                            "descricao": descricao_item,
+                                            "data_homologacao": data_homolog,
+                                            "quantidade": qtd,
+                                            "valor_unitario": unit,
+                                            "valor_total_item": tot,
+                                            "fornecedor": fornecedor_nome,
+                                            "cnpj_fornecedor": fornecedor_cnpj,
+                                            "situacao": "Venceu"
+                                        }
+
+                                        # Adiciona a TODOS os fornecedores
+                                        chave_item = f"{numero_item}-{fornecedor_cnpj}"
+                                        if not any(x['numero_item'] == numero_item and x['cnpj_fornecedor'] == fornecedor_cnpj for x in itens_todos):
+                                            itens_todos.append(item_reg)
+                                            print("✅", end="", flush=True)
+
+                                        # Se for nosso CNPJ, adiciona também à seção específica
+                                        cv_clean = (fornecedor_cnpj or "").replace(".", "").replace("/", "").replace("-", "")
+                                        if CNPJ_ALVO in cv_clean:
+                                            if not any(x['numero_item'] == numero_item for x in itens_licitacao):
+                                                itens_licitacao.append(item_reg)
+                                            
+                                            # Atualiza resumo por fornecedor (seu)
+                                            if fornecedor_nome not in resumo:
+                                                resumo[fornecedor_nome] = 0
+                                            resumo[fornecedor_nome] += tot
+
+                                    except Exception as e_inner:
+                                        print(f"[erro item: {str(e_inner)[:15]}]", end="")
+                                        continue
 
                             except Exception as e:
                                 print(f"[erro: {str(e)[:20]}]", end="")
