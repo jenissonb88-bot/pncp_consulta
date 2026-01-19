@@ -2,397 +2,247 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PNCP Monitor - Pregão Eletrônico</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
     :root {
       --primary: #1e40af;
       --primary-dark: #1e3a8a;
-      --success: #059669;
-      --warning: #d97706;
-      --danger: #dc2626;
       --bg: #f8fafc;
       --card: #ffffff;
       --text: #1e293b;
       --border: #e2e8f0;
+      --danger: #dc2626;
+      --success: #059669;
+      --warning: #d97706;
     }
 
     * { box-sizing: border-box; }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, var(--bg) 0%, #e2e8f0 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      padding: 0;
+      background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 16px;
     }
 
     header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      padding: 2rem;
-      border-radius: 16px;
-      margin-bottom: 2rem;
-      box-shadow: 0 10px 25px rgba(30, 64, 175, 0.3);
+      background: var(--primary);
+      color: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
     }
 
-    h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 2.2rem;
-      font-weight: 700;
+    header h1 {
+      margin: 0 0 4px 0;
+      font-size: 1.5rem;
     }
 
-    h2 {
-      margin: 2rem 0 1rem 0;
-      font-size: 1.3rem;
-      color: var(--primary);
-    }
-
-    .subtitle {
-      opacity: 0.95;
+    header p {
       margin: 0;
-      font-size: 1.1rem;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin: 2rem 0;
-    }
-
-    .stat-card {
-      background: var(--card);
-      padding: 1.5rem;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border-left: 4px solid var(--primary);
-    }
-
-    .stat-number {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--primary);
-      margin: 0;
-    }
-
-    .stat-label {
-      color: #64748b;
       font-size: 0.95rem;
-      margin: 0.5rem 0 0 0;
+      opacity: 0.9;
     }
+
+    #status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin: 12px 0;
+    }
+
+    .status-loading { background: #fef3c7; color: #92400e; }
+    .status-success { background: #d1fae5; color: #065f46; }
+    .status-error   { background: #fee2e2; color: #991b1b; }
 
     .controls {
       background: var(--card);
-      padding: 1.5rem;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .controls-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
       align-items: center;
     }
 
-    .search-box {
-      flex: 1;
-      min-width: 250px;
-      position: relative;
+    .controls label {
+      font-size: 0.85rem;
+      color: #475569;
     }
 
-    .search-box input {
-      width: 100%;
-      padding: 12px 16px 12px 45px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      font-size: 1rem;
-      transition: all 0.3s;
+    .controls input,
+    .controls select {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
     }
 
-    .search-box input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #94a3b8;
-    }
-
-    .filter-group {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    select {
-      padding: 10px 12px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      background: white;
-      color: var(--text);
-    }
-
-    select:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .btn {
-      padding: 10px 20px;
+    .controls button {
+      padding: 6px 10px;
+      border-radius: 6px;
       border: none;
-      border-radius: 8px;
-      font-weight: 600;
+      font-size: 0.9rem;
       cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
     }
 
     .btn-primary {
       background: var(--primary);
-      color: white;
+      color: #fff;
     }
 
     .btn-primary:hover {
       background: var(--primary-dark);
-      transform: translateY(-1px);
     }
 
     .btn-secondary {
-      background: #f1f5f9;
-      color: var(--text);
-      border: 2px solid var(--border);
-    }
-
-    .btn-secondary:hover {
       background: #e2e8f0;
+      color: #111827;
     }
 
-    .charts-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .chart-container {
+    .table-wrapper {
       background: var(--card);
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      height: 300px;
-    }
-
-    .table-container {
-      background: var(--card);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      margin-bottom: 2rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: auto;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
     }
 
     th {
-      background: var(--primary);
-      color: white;
-      padding: 16px 12px;
-      text-align: left;
-      font-weight: 600;
+      background: #e5e7eb;
       position: sticky;
       top: 0;
+      z-index: 1;
     }
 
-    td {
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
+    tr:nth-child(even) td {
+      background: #f9fafb;
     }
 
-    tr:hover {
-      background-color: #f8fafc;
-    }
-
-    .linha-licitacao {
-      background: linear-gradient(90deg, rgba(30,64,175,0.1) 0%, transparent 100%);
-      font-weight: 600;
-    }
-
-    .linha-item {
-      background: #fafbfc;
-      font-size: 0.92em;
-    }
-
-    .item-sem-resultado {
-      background: #fef2f2;
-      border-left: 4px solid var(--danger);
-    }
-
-    .item-outro-fornecedor {
-      background: #fef9e7;
-      border-left: 4px solid var(--warning);
-    }
-
-    .linha-totais {
-      background: #f0fdf4;
-      font-weight: 600;
-      border-top: 2px solid var(--success);
-    }
-
-    .linha-todos-itens {
-      background: #f0f9ff;
-      font-weight: 600;
-      border-top: 2px solid #0284c7;
-    }
-
-    .badge {
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      display: inline-block;
-    }
-
-    .badge-venceu { background: #dcfce7; color: var(--success); }
-    .badge-sem { background: #fef2f2; color: var(--danger); }
-    .badge-outro { background: #fef9e7; color: var(--warning); }
-
-    .valor {
-      font-family: 'Courier New', monospace;
-      font-weight: 600;
-    }
-
-    #status {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      font-weight: 500;
-    }
-
-    .status-loading { background: #fef3c7; color: #92400e; }
-    .status-success { background: #d1fae5; color: #065f46; }
-    .status-error { background: #fee2e2; color: #991b1b; }
-
-    .btn-expand {
-      background: none;
-      border: none;
+    a {
       color: var(--primary);
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.2s;
+      text-decoration: none;
     }
 
-    .btn-expand:hover {
-      background: rgba(30,64,175,0.1);
+    a:hover { text-decoration: underline; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      margin-left: 4px;
     }
 
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
+    .tag-ok { background: #dcfce7; color: var(--success); }
+    .tag-warn { background: #fef3c7; color: var(--warning); }
+    .tag-bad { background: #fee2e2; color: var(--danger); }
 
-    .modal-content {
-      background-color: var(--card);
-      margin: 5% auto;
-      padding: 0;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 1000px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-
-    .modal-header {
-      padding: 20px 24px;
-      background: var(--primary);
-      color: white;
-      border-radius: 12px 12px 0 0;
+    .pagination {
+      margin: 8px 0;
+      font-size: 0.85rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    /* Modal simples */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #fff;
+      max-width: 900px;
+      width: 95%;
+      max-height: 80vh;
+      border-radius: 8px;
+      overflow: auto;
+      border: 1px solid var(--border);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #f1f5f9;
     }
 
     .modal-header h2 {
+      font-size: 1rem;
       margin: 0;
-      color: white;
     }
 
-    .close {
-      color: white;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-      background: none;
+    .modal-close {
       border: none;
+      background: none;
+      font-size: 1.2rem;
+      cursor: pointer;
     }
 
-    .close:hover {
-      opacity: 0.7;
-    }
-
-    .itens-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .itens-table th,
-    .itens-table td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .itens-table th {
-      background: #f8fafc;
-      font-weight: 600;
+    .modal-body {
+      padding: 8px 12px 12px 12px;
     }
 
     @media (max-width: 768px) {
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
+      th, td {
+        padding: 4px 6px;
       }
-      
-      .charts-row {
-        grid-template-columns: 1fr;
-      }
-      
-      .search-box input {
-        min-width: 100%;
-      }
-      
-      table {
-        font-size: 0.85rem;
+      header h1 {
+        font-size: 1.2rem;
       }
     }
   </style>
@@ -400,492 +250,314 @@
 <body>
   <div class="container">
     <header>
-      <h1>📊 PNCP Monitor</h1>
-      <p class="subtitle">Pregão Eletrônico - Licitações, Itens e Fornecedores em Tempo Real</p>
+      <h1>PNCP Monitor</h1>
+      <p>Pregão Eletrônico (código 6) – visão leve com filtros para busca.</p>
     </header>
 
-    <div id="status" class="status-loading">🔄 Carregando dados do PNCP...</div>
-
-    <!-- Estatísticas -->
-    <div class="stats-grid" id="stats-grid" style="display: none;">
-      <div class="stat-card">
-        <div class="stat-number" id="total-licitacoes">0</div>
-        <div class="stat-label">Licitações</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="total-itens">0</div>
-        <div class="stat-label">Itens (Seu CNPJ)</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="total-itens-todos">0</div>
-        <div class="stat-label">Itens (Todos)</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="total-vencidos">R$ 0</div>
-        <div class="stat-label">Valor Ganho</div>
-      </div>
+    <div id="status" class="status-loading">
+      Carregando dados do PNCP...
     </div>
 
-    <!-- Controles -->
     <div class="controls">
-      <div class="search-box">
-        <svg class="search-icon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-        </svg>
-        <input type="text" id="busca" placeholder="Buscar por órgão, objeto, fornecedor...">
+      <div class="controls-group">
+        <label for="busca">Busca geral:</label>
+        <input id="busca" type="text" placeholder="Órgão, objeto ou fornecedor">
       </div>
-      
-      <div class="filter-group">
-        <select id="filtro-situacao">
-          <option value="">Todas situações</option>
-          <option value="Venceu">Vencidos (Seu CNPJ)</option>
-          <option value="SemResultado">Sem resultado</option>
-          <option value="Outro">Outro fornecedor</option>
+
+      <div class="controls-group">
+        <label for="filtro-uf">UF:</label>
+        <select id="filtro-uf">
+          <option value="">Todas</option>
         </select>
       </div>
-      
-      <a href="#" class="btn btn-secondary" id="export-csv">📥 Exportar CSV</a>
-      <button class="btn btn-primary" onclick="carregarDadosPncp()">🔄 Atualizar</button>
+
+      <div class="controls-group">
+        <label for="filtro-situacao">Situação (seu CNPJ):</label>
+        <select id="filtro-situacao">
+          <option value="">Todas</option>
+          <option value="Venceu">Venceu</option>
+          <option value="SemResultado">Sem resultado</option>
+        </select>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn-secondary" id="btn-limpar">Limpar filtros</button>
+        <button class="btn-primary" id="btn-aplicar">Aplicar filtros</button>
+      </div>
     </div>
 
-    <!-- Gráficos -->
-    <div class="charts-row" id="charts-container" style="display: none;">
-      <div class="chart-container">
-        <h3 style="margin: 0 0 1rem 0; color: var(--text);">Valor por Situação</h3>
-        <canvas id="chart-valores"></canvas>
+    <div class="pagination">
+      <div>
+        <span id="info-resultado">0 licitações</span>
       </div>
-      <div class="chart-container">
-        <h3 style="margin: 0 0 1rem 0; color: var(--text);">Itens por Licitação</h3>
-        <canvas id="chart-itens"></canvas>
+      <div>
+        <button id="prev-page">&laquo; Anterior</button>
+        <span id="page-info">Página 1</span>
+        <button id="next-page">Próxima &raquo;</button>
       </div>
     </div>
 
-    <!-- Tabela de Licitações e Itens do seu CNPJ -->
-    <h2>🎯 Itens para seu CNPJ</h2>
-    <div class="table-container">
-      <table id="tabela-licitacoes">
+    <div class="table-wrapper">
+      <table>
         <thead>
           <tr>
             <th>Órgão/UASG</th>
-            <th>Órgão</th>
-            <th>Pregão</th>
-            <th>ID PNCP</th>
+            <th>Pregão / ID PNCP</th>
             <th>Período</th>
             <th>Cidade/UF</th>
             <th>Objeto</th>
-            <th>Itens</th>
+            <th>Itens (seu CNPJ)</th>
           </tr>
         </thead>
         <tbody id="corpo-tabela"></tbody>
       </table>
     </div>
-
-    <!-- Tabela de TODOS os Fornecedores e Itens -->
-    <h2>📋 Todos os Fornecedores e Itens</h2>
-    <div class="table-container">
-      <table id="tabela-todos-fornecedores">
-        <thead>
-          <tr>
-            <th>Pregão</th>
-            <th>Item</th>
-            <th>Descrição</th>
-            <th>Qtd</th>
-            <th>Unitário (R$)</th>
-            <th>Total (R$)</th>
-            <th>Fornecedor</th>
-            <th>Situação</th>
-          </tr>
-        </thead>
-        <tbody id="corpo-todos-fornecedores"></tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- MODAL DE ITENS -->
+  <!-- Modal de itens -->
   <div id="modal-itens" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-titulo">Itens da Licitação</h2>
-        <button class="close" onclick="fecharModal()">&times;</button>
+        <h2 id="modal-titulo">Itens</h2>
+        <button class="modal-close" id="modal-fechar">&times;</button>
       </div>
-      <div style="padding: 20px;">
-        <table class="itens-table">
+      <div class="modal-body">
+        <table>
           <thead>
             <tr>
               <th>Item</th>
               <th>Descrição</th>
               <th>Data Homolog.</th>
               <th>Qtd</th>
-              <th>Unit. (R$)</th>
-              <th>Total (R$)</th>
+              <th>Unitário</th>
+              <th>Total</th>
               <th>Fornecedor</th>
               <th>Situação</th>
             </tr>
           </thead>
-          <tbody id="modal-body-table"></tbody>
+          <tbody id="modal-corpo"></tbody>
         </table>
       </div>
     </div>
   </div>
 
   <script>
+    const ITENS_POR_PAGINA = 20;
     let dadosCompletos = [];
     let dadosFiltrados = [];
-    let chartValores = null;
-    let chartItens = null;
+    let paginaAtual = 1;
 
     async function carregarDadosPncp() {
       const status = document.getElementById('status');
-      status.textContent = '🔄 Carregando dados do PNCP...';
+      status.textContent = 'Carregando dados do PNCP...';
       status.className = 'status-loading';
 
       try {
-        const resp = await fetch('dados_pncp.json?t=' + Date.now());
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
+        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
         dadosCompletos = await resp.json();
-        processarEDesplegarDados();
-        status.textContent = `✅ ${dadosCompletos.length} licitações carregadas`;
+        dadosFiltrados = dadosCompletos.slice();
+        preencherFiltroUF();
+        paginaAtual = 1;
+        atualizarTabela();
+        status.textContent = 'Dados carregados com sucesso.';
         status.className = 'status-success';
       } catch (e) {
-        status.textContent = `❌ Erro: ${e.message}`;
+        status.textContent = 'Erro ao carregar dados: ' + e.message;
         status.className = 'status-error';
-        console.error(e);
       }
     }
 
-    function processarEDesplegarDados() {
-      dadosFiltrados = [...dadosCompletos];
-      
-      atualizarEstatisticas();
-      renderizarTabela();
-      renderizarTodosFornecedores();
-      renderizarGraficos();
-      configurarFiltros();
+    function preencherFiltroUF() {
+      const selectUF = document.getElementById('filtro-uf');
+      const ufs = new Set();
+      dadosCompletos.forEach(lic => {
+        if (lic.uf) ufs.add(lic.uf);
+      });
+      const ordenadas = Array.from(ufs).sort();
+      selectUF.innerHTML = '<option value=\"\">Todas</option>';
+      ordenadas.forEach(uf => {
+        const opt = document.createElement('option');
+        opt.value = uf;
+        opt.textContent = uf;
+        selectUF.appendChild(opt);
+      });
     }
 
-    function atualizarEstatisticas() {
-      const totalLic = dadosFiltrados.length;
-      const totalItens = dadosFiltrados.reduce((sum, lic) => sum + (lic.itens?.length || 0), 0);
-      const totalItensTodos = dadosFiltrados.reduce((sum, lic) => sum + (lic.itens_todos_fornecedores?.length || 0), 0);
-      const totalVencido = dadosFiltrados.reduce((sum, lic) => {
-        return sum + (lic.totais_fornecedor?.reduce((s, tf) => s + tf.valor_total_fornecedor, 0) || 0);
-      }, 0);
+    function aplicarFiltros() {
+      const termo = document.getElementById('busca').value.toLowerCase().trim();
+      const uf = document.getElementById('filtro-uf').value;
+      const situacao = document.getElementById('filtro-situacao').value;
 
-      document.getElementById('total-licitacoes').textContent = totalLic;
-      document.getElementById('total-itens').textContent = totalItens;
-      document.getElementById('total-itens-todos').textContent = totalItensTodos;
-      document.getElementById('total-vencidos').textContent = formatarMoeda(totalVencido);
+      dadosFiltrados = dadosCompletos.filter(lic => {
+        let ok = true;
 
-      document.getElementById('stats-grid').style.display = 'grid';
-      document.getElementById('charts-container').style.display = 'grid';
+        if (termo) {
+          const texto = [
+            lic.orgao_nome,
+            lic.numero_pregao,
+            lic.objeto,
+            lic.cidade,
+            lic.id_pncp,
+            ...(lic.itens || []).map(i => i.descricao),
+            ...(lic.itens || []).map(i => i.fornecedor)
+          ].join(' ').toLowerCase();
+          if (!texto.includes(termo)) ok = false;
+        }
+
+        if (uf && lic.uf !== uf) ok = false;
+
+        if (situacao) {
+          if (!lic.itens || !lic.itens.some(i => i.situacao === situacao)) ok = false;
+        }
+
+        return ok;
+      });
+
+      paginaAtual = 1;
+      atualizarTabela();
     }
 
-    function renderizarTabela() {
+    function atualizarTabela() {
       const corpo = document.getElementById('corpo-tabela');
       corpo.innerHTML = '';
 
-      dadosFiltrados.forEach((lic, index) => {
-        const trLic = criarLinhaLicitacao(lic, index);
-        corpo.appendChild(trLic);
+      const total = dadosFiltrados.length;
+      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+      const fim = Math.min(inicio + ITENS_POR_PAGINA, total);
+      const paginaDados = dadosFiltrados.slice(inicio, fim);
 
-        if (lic.itens) {
-          lic.itens.forEach(item => {
-            const trItem = criarLinhaItem(item);
-            corpo.appendChild(trItem);
-          });
-        }
+      paginaDados.forEach((lic, indexLocal) => {
+        const idxGlobal = inicio + indexLocal;
+        const tr = document.createElement('tr');
 
-        if (lic.totais_fornecedor?.length) {
-          const trTotais = criarLinhaTotais(lic);
-          corpo.appendChild(trTotais);
-        }
+        const orgaoUasg = `${lic.orgao_codigo || ''}/${lic.uasg || ''}`;
+        const periodo = `${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}`;
+        const cidadeUf = `${lic.cidade || ''}/${lic.uf || ''}`;
+        const qtdItens = lic.itens ? lic.itens.length : 0;
+
+        tr.innerHTML = `
+          <td>${orgaoUasg}<br><small>${lic.orgao_nome || ''}</small></td>
+          <td>
+            ${lic.numero_pregao || ''}<br>
+            <a href="${lic.link_edital || '#'}" target="_blank">${lic.id_pncp || ''}</a>
+          </td>
+          <td>${periodo}</td>
+          <td>${cidadeUf}</td>
+          <td>${(lic.objeto || '').substring(0, 80)}${lic.objeto && lic.objeto.length > 80 ? '...' : ''}</td>
+          <td>
+            ${qtdItens} item${qtdItens !== 1 ? 's' : ''}<br>
+            <button type="button" data-idx="${idxGlobal}" class="btn-secondary btn-itens">
+              Ver itens
+            </button>
+          </td>
+        `;
+        corpo.appendChild(tr);
+      });
+
+      document.getElementById('info-resultado').textContent =
+        `${total} licitação${total !== 1 ? 'es' : ''} (mostrando ${inicio + 1}-${fim})`;
+
+      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
+      document.getElementById('page-info').textContent = `Página ${paginaAtual} de ${totalPaginas}`;
+      document.getElementById('prev-page').disabled = paginaAtual <= 1;
+      document.getElementById('next-page').disabled = paginaAtual >= totalPaginas;
+
+      document.querySelectorAll('.btn-itens').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-idx'), 10);
+          abrirModalItens(idx);
+        });
       });
     }
 
-    function renderizarTodosFornecedores() {
-      const corpo = document.getElementById('corpo-todos-fornecedores');
+    function abrirModalItens(idxGlobal) {
+      const lic = dadosFiltrados[idxGlobal];
+      if (!lic || !lic.itens) return;
+
+      document.getElementById('modal-titulo').textContent =
+        `Itens – ${lic.numero_pregao || ''} – ${lic.orgao_nome || ''}`;
+
+      const corpo = document.getElementById('modal-corpo');
       corpo.innerHTML = '';
 
-      dadosFiltrados.forEach(lic => {
-        if (lic.itens_todos_fornecedores) {
-          lic.itens_todos_fornecedores.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            let badgeClass = 'badge-sem';
-            let badgeText = '⚠️ Sem resultado';
-            
-            if (item.situacao === 'Venceu') {
-              const eh_nosso = item.cnpj_fornecedor && item.cnpj_fornecedor.replace(/\D/g, '') === '08778201000126';
-              if (eh_nosso) {
-                badgeClass = 'badge-venceu';
-                badgeText = '✅ Venceu (Seu CNPJ)';
-              } else {
-                badgeClass = 'badge-outro';
-                badgeText = '🏢 Outro fornecedor';
-                tr.classList.add('item-outro-fornecedor');
-              }
-            } else {
-              tr.classList.add('item-sem-resultado');
-            }
-
-            tr.innerHTML = `
-              <td>${lic.numero_pregao || ''}</td>
-              <td>${item.numero_item || ''}</td>
-              <td>${item.descricao?.substring(0, 50) || ''}</td>
-              <td>${item.quantidade || ''}</td>
-              <td class="valor">${formatarMoeda(item.valor_unitario)}</td>
-              <td class="valor">${formatarMoeda(item.valor_total_item)}</td>
-              <td>${item.fornecedor || '-'}</td>
-              <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-            `;
-            corpo.appendChild(tr);
-          });
-        }
-      });
-    }
-
-    function criarLinhaLicitacao(lic, index) {
-      const tr = document.createElement('tr');
-      tr.className = 'linha-licitacao';
-      
-      const orgaoUasg = `${lic.orgao_codigo || ''}/${lic.uasg || ''}`;
-      const periodo = `${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}`;
-      const cidadeUf = `${lic.cidade || ''}/${lic.uf || ''}`;
-      const qtdItens = lic.itens?.length || 0;
-
-      tr.innerHTML = `
-        <td>${orgaoUasg}</td>
-        <td>${lic.orgao_nome || ''}</td>
-        <td>${lic.numero_pregao || ''}</td>
-        <td><a href="${lic.link_edital || '#'}" target="_blank">${lic.id_pncp || ''}</a></td>
-        <td>${periodo}</td>
-        <td>${cidadeUf}</td>
-        <td>${lic.objeto?.substring(0, 60)}${lic.objeto?.length > 60 ? '...' : ''}</td>
-        <td>
-          <button class="btn-expand" onclick="abrirModalItens(${index})">
-            📋 ${qtdItens} item${qtdItens !== 1 ? 's' : ''}
-          </button>
-        </td>
-      `;
-      return tr;
-    }
-
-    function criarLinhaItem(item) {
-      const tr = document.createElement('tr');
-      tr.className = `linha-item`;
-      
-      const badgeClass = item.situacao === 'Venceu' ? 'badge-venceu' : 'badge-sem';
-      const badgeText = item.situacao === 'Venceu' ? '✅ Venceu' : '⚠️ Sem resultado';
-      
-      tr.innerHTML = `
-        <td colspan="2">Item ${item.numero_item} - ${item.descricao?.substring(0, 60) || ''}</td>
-        <td>${formatarData(item.data_homologacao)}</td>
-        <td>${item.quantidade || ''}</td>
-        <td class="valor">${formatarMoeda(item.valor_unitario)}</td>
-        <td class="valor">${formatarMoeda(item.valor_total_item)}</td>
-        <td>${item.fornecedor || ''}</td>
-        <td>
-          <span class="badge ${badgeClass}">${badgeText}</span>
-        </td>
-      `;
-      return tr;
-    }
-
-    function criarLinhaTotais(lic) {
-      const tr = document.createElement('tr');
-      tr.className = 'linha-totais';
-      
-      const cel = document.createElement('td');
-      cel.colSpan = 8;
-      cel.innerHTML = `
-        💰 <strong>Totais por fornecedor:</strong> 
-        ${lic.totais_fornecedor.map(tf => 
-          `<span class="valor">${formatarMoeda(tf.valor_total_fornecedor)} (${tf.fornecedor})</span>`
-        ).join(' | ')}
-      `;
-      tr.appendChild(cel);
-      return tr;
-    }
-
-    function abrirModalItens(index) {
-      const lic = dadosFiltrados[index];
-      if (!lic || !lic.itens) return;
-      
-      document.getElementById('modal-titulo').textContent = 
-        `Itens - ${lic.numero_pregao} (${lic.orgao_nome})`;
-      
-      const tbody = document.getElementById('modal-body-table');
-      tbody.innerHTML = '';
-      
       lic.itens.forEach(item => {
         const tr = document.createElement('tr');
-        const situacao = item.situacao === 'Venceu' ? 
-          '<span class="badge badge-venceu">✅ Venceu</span>' : 
-          '<span class="badge badge-sem">⚠️ ' + (item.situacao || 'Sem resultado') + '</span>';
-          
+
+        let tagHtml = '';
+        if (item.situacao === 'Venceu') {
+          tagHtml = '<span class="tag tag-ok">Venceu</span>';
+        } else if (item.situacao === 'SemResultado') {
+          tagHtml = '<span class="tag tag-bad">Sem resultado</span>';
+        } else {
+          tagHtml = `<span class="tag tag-warn">${item.situacao || ''}</span>`;
+        }
+
         tr.innerHTML = `
           <td>${item.numero_item || ''}</td>
           <td>${item.descricao || ''}</td>
           <td>${formatarData(item.data_homologacao)}</td>
           <td>${item.quantidade || ''}</td>
-          <td class="valor">${formatarMoeda(item.valor_unitario)}</td>
-          <td class="valor">${formatarMoeda(item.valor_total_item)}</td>
-          <td>${item.fornecedor || '-'}</td>
-          <td>${situacao}</td>
+          <td>${formatarMoeda(item.valor_unitario)}</td>
+          <td>${formatarMoeda(item.valor_total_item)}</td>
+          <td>${item.fornecedor || ''}</td>
+          <td>${tagHtml}</td>
         `;
-        tbody.appendChild(tr);
+        corpo.appendChild(tr);
       });
-      
-      document.getElementById('modal-itens').style.display = 'block';
+
+      const modal = document.getElementById('modal-itens');
+      modal.style.display = 'flex';
     }
 
     function fecharModal() {
       document.getElementById('modal-itens').style.display = 'none';
     }
 
-    window.onclick = function(event) {
-      const modal = document.getElementById('modal-itens');
-      if (event.target === modal) {
-        fecharModal();
-      }
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') fecharModal();
-    });
-
-    function configurarFiltros() {
-      const buscaInput = document.getElementById('busca');
-      const filtroSituacao = document.getElementById('filtro-situacao');
-
-      function filtrar() {
-        const termo = buscaInput.value.toLowerCase();
-        const situacao = filtroSituacao.value;
-
-        dadosFiltrados = dadosCompletos.filter(lic => {
-          const match = 
-            lic.orgao_nome?.toLowerCase().includes(termo) ||
-            lic.numero_pregao?.toLowerCase().includes(termo) ||
-            lic.objeto?.toLowerCase().includes(termo) ||
-            lic.itens?.some(item => 
-              item.descricao?.toLowerCase().includes(termo) ||
-              item.fornecedor?.toLowerCase().includes(termo)
-            );
-
-          let matchSituacao = true;
-          if (situacao === 'Venceu') {
-            matchSituacao = lic.itens?.some(item => item.situacao === 'Venceu');
-          } else if (situacao === 'SemResultado') {
-            matchSituacao = lic.itens?.some(item => item.situacao === 'SemResultado');
-          }
-
-          return match && matchSituacao;
-        });
-
-        processarEDesplegarDados();
-      }
-
-      buscaInput.addEventListener('input', filtrar);
-      filtroSituacao.addEventListener('change', filtrar);
-    }
-
-    function renderizarGraficos() {
-      if (chartValores) chartValores.destroy();
-      if (chartItens) chartItens.destroy();
-
-      const ctx1 = document.getElementById('chart-valores').getContext('2d');
-      const valoresData = dadosFiltrados.reduce((acc, lic) => {
-        const total = lic.totais_fornecedor?.reduce((s, tf) => s + tf.valor_total_fornecedor, 0) || 0;
-        acc.vencidos += total;
-        return acc;
-      }, {vencidos: 0});
-
-      chartValores = new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-          labels: ['Vencidos (Seu CNPJ)'],
-          datasets: [{
-            data: [valoresData.vencidos || 1],
-            backgroundColor: ['#10b981']
-          }]
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } }
-        }
-      });
-
-      const ctx2 = document.getElementById('chart-itens').getContext('2d');
-      const itensPorLic = dadosFiltrados.slice(0, 10).map(lic => lic.itens?.length || 0);
-      
-      chartItens = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: dadosFiltrados.slice(0, 10).map((_, i) => `Lic ${i+1}`),
-          datasets: [{
-            label: 'Nº Itens (Seu CNPJ)',
-            data: itensPorLic,
-            backgroundColor: '#3b82f6',
-            borderRadius: 4
-          }]
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          scales: { 
-            y: { 
-              beginAtZero: true,
-              ticks: { stepSize: 1 }
-            }
-          }
-        }
-      });
-    }
-
-    document.getElementById('export-csv').addEventListener('click', function(e) {
-      e.preventDefault();
-      const csv = gerarCSV();
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `pncp_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-    });
-
-    function gerarCSV() {
-      let csv = 'Órgão,UASG,Pregão,ID PNCP,Data Início,Data Fim,Cidade,UF,Objeto,Item,Descrição,Qtd,Unitário,Total,Fornecedor,CNPJ Fornecedor,Situação\n';
-      
-      dadosFiltrados.forEach(lic => {
-        lic.itens_todos_fornecedores?.forEach(item => {
-          csv += `"${lic.orgao_nome || ''}","${lic.uasg || ''}","${lic.numero_pregao || ''}","${lic.id_pncp || ''}",`;
-          csv += `"${formatarData(lic.data_inicio_propostas)}","${formatarData(lic.data_fim_propostas)}",`;
-          csv += `"${lic.cidade || ''}","${lic.uf || ''}","${lic.objeto || ''}",`;
-          csv += `"${item.numero_item || ''}","${item.descricao || ''}","${item.quantidade || ''}",`;
-          csv += `"${item.valor_unitario || ''}","${item.valor_total_item || ''}","${item.fornecedor || ''}","${item.cnpj_fornecedor || ''}","${item.situacao || ''}"\n`;
-        });
-      });
-      
-      return csv;
-    }
-
     function formatarData(iso) {
       if (!iso) return '';
-      try {
-        const d = new Date(iso);
-        return d.toLocaleDateString('pt-BR');
-      } catch {
-        return iso;
-      }
+      const d = new Date(iso);
+      if (isNaN(d)) return '';
+      return d.toLocaleDateString('pt-BR');
     }
 
-    function formatarMoeda(valor) {
-      return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-      }).format(Number(valor) || 0);
+    function formatarMoeda(v) {
+      if (v === null || v === undefined) return '';
+      const n = Number(v);
+      if (isNaN(n)) return '';
+      return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
+
+    document.getElementById('btn-aplicar').addEventListener('click', aplicarFiltros);
+    document.getElementById('btn-limpar').addEventListener('click', () => {
+      document.getElementById('busca').value = '';
+      document.getElementById('filtro-uf').value = '';
+      document.getElementById('filtro-situacao').value = '';
+      dadosFiltrados = dadosCompletos.slice();
+      paginaAtual = 1;
+      atualizarTabela();
+    });
+
+    document.getElementById('prev-page').addEventListener('click', () => {
+      if (paginaAtual > 1) {
+        paginaAtual--;
+        atualizarTabela();
+      }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+      const total = dadosFiltrados.length;
+      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
+      if (paginaAtual < totalPaginas) {
+        paginaAtual++;
+        atualizarTabela();
+      }
+    });
+
+    document.getElementById('modal-fechar').addEventListener('click', fecharModal);
+    document.getElementById('modal-itens').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-itens') fecharModal();
+    });
 
     document.addEventListener('DOMContentLoaded', carregarDadosPncp);
   </script>
