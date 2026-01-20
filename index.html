@@ -62,34 +62,6 @@
             font-size: 0.95rem;
         }
 
-        /* Alert */
-        .alert {
-            border-radius: 8px;
-            border: none;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-        }
-
-        .alert-danger {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
         /* Cards de Estatísticas */
         .stats-cards {
             display: grid;
@@ -112,22 +84,6 @@
             box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
 
-        .stat-card.valor {
-            border-left-color: #28a745;
-        }
-
-        .stat-card.itens {
-            border-left-color: #ffc107;
-        }
-
-        .stat-card.municipios {
-            border-left-color: #17a2b8;
-        }
-
-        .stat-card.licitacoes {
-            border-left-color: #667eea;
-        }
-
         .stat-card h3 {
             color: #999;
             font-size: 0.85rem;
@@ -147,12 +103,15 @@
             margin-bottom: 8px;
         }
 
-        .stat-card .subtitle {
-            color: #999;
-            font-size: 0.8rem;
+        /* Alertas */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 15px 20px;
+            margin-bottom: 20px;
         }
 
-        /* Seção de Filtros */
+        /* Filtros */
         .filters-section {
             background: white;
             border-radius: 12px;
@@ -170,19 +129,11 @@
             gap: 10px;
         }
 
-        .filters-section h4 i {
-            color: #667eea;
-            font-size: 1.2rem;
-        }
-
         .form-label {
             font-weight: 600;
             color: #333;
             margin-bottom: 8px;
             font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         .form-select,
@@ -190,28 +141,13 @@
             padding: 10px 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            background-color: white;
-            color: #333;
             font-size: 0.9rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .form-select:focus,
         .form-control:focus {
             border-color: #667eea;
-            outline: none;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-select {
-            cursor: pointer;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
         }
 
         .btn {
@@ -219,9 +155,6 @@
             border-radius: 8px;
             font-weight: 600;
             transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
             border: none;
             cursor: pointer;
             font-size: 0.9rem;
@@ -235,37 +168,6 @@
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            color: white;
-            text-decoration: none;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.8rem;
-        }
-
-        .btn-outline-primary {
-            border: 2px solid #667eea;
-            color: #667eea;
-            background: white;
-        }
-
-        .btn-outline-primary:hover {
-            background: #667eea;
-            color: white;
-            text-decoration: none;
         }
 
         /* Tabela */
@@ -275,19 +177,13 @@
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow-x: auto;
+            margin-bottom: 30px;
         }
 
         .table-container h4 {
             color: #333;
             font-weight: 700;
             margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .table-container h4 i {
-            color: #667eea;
         }
 
         .table {
@@ -300,35 +196,29 @@
             color: #333;
             font-weight: 700;
             padding: 15px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .table tbody td {
             padding: 15px;
             vertical-align: middle;
             border-bottom: 1px solid #e0e0e0;
-            font-size: 0.9rem;
         }
 
         .table tbody tr:hover {
             background: #f8f9fa;
         }
 
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
+        .api-config {
+            background: #e7f3ff;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
         }
 
-        .badge.bg-success {
-            background: #28a745 !important;
-        }
-
-        .badge.bg-info {
-            background: #17a2b8 !important;
+        .api-config strong {
+            color: #1976d2;
         }
 
         code {
@@ -336,146 +226,6 @@
             padding: 2px 6px;
             border-radius: 4px;
             color: #667eea;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .text-muted {
-            color: #999;
-            font-size: 0.85rem;
-        }
-
-        /* Modal de Detalhes */
-        .modal-content {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom: none;
-            border-radius: 12px 12px 0 0;
-        }
-
-        .modal-header .btn-close {
-            filter: brightness(0) invert(1);
-        }
-
-        .modal-body {
-            padding: 25px;
-        }
-
-        .detail-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .detail-row.full {
-            grid-template-columns: 1fr;
-        }
-
-        .detail-item {
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .detail-label {
-            color: #999;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            display: block;
-        }
-
-        .detail-value {
-            color: #333;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .table-modal {
-            margin-top: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .table-modal thead {
-            background: #f8f9fa;
-        }
-
-        .table-modal thead th {
-            padding: 12px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .table-modal tbody td {
-            padding: 10px 12px;
-            font-size: 0.8rem;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .table-modal tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Mensagem vazia */
-        .empty-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-message i {
-            font-size: 3rem;
-            opacity: 0.3;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        /* Responsivo */
-        @media (max-width: 768px) {
-            .stats-cards {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .detail-row {
-                grid-template-columns: 1fr;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .table-container {
-                padding: 15px;
-            }
-
-            .table thead th,
-            .table tbody td {
-                padding: 10px;
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Loading spinner */
-        .spinner-border {
-            width: 2rem;
-            height: 2rem;
         }
 
         .loading-overlay {
@@ -499,17 +249,10 @@
             opacity: 1;
         }
 
-        .api-config {
-            background: #e7f3ff;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        .api-config strong {
-            color: #1976d2;
+        @media (max-width: 768px) {
+            .stats-cards {
+                grid-template-columns: 1fr 1fr;
+            }
         }
     </style>
 </head>
@@ -527,99 +270,34 @@
             <p>Análise de Licitações Públicas em Tempo Real</p>
         </div>
 
-        <!-- Alertas e Status -->
+        <!-- Alertas -->
         <div id="alertas-container"></div>
         
         <div class="api-config">
-            <strong>🚀 DADOS REAIS DO PNCP (Drogafonte)</strong>
+            <strong>✅ DADOS REAIS DO PNCP</strong>
             <div style="font-size: 0.85rem; margin-top: 8px;">
-                <div>✅ Fonte: <code>dados.json</code> (gerado por coleta_pncp.py)</div>
-                <div>📊 Atualização automática a cada <span id="refresh-time">1 minuto</span></div>
+                <div>📁 Fonte: <code>dados_pncp.json</code> (gerado por coleta_pncp.py)</div>
                 <div id="data-status" style="margin-top: 5px; color: #1976d2;">Carregando...</div>
             </div>
         </div>
 
         <!-- Cards de Estatísticas -->
         <div class="stats-cards">
-            <div class="stat-card licitacoes">
+            <div class="stat-card">
                 <h3><i class="fas fa-file-contract"></i> Licitações</h3>
                 <div class="value" id="total-lic">-</div>
-                <div class="subtitle">Total de processos</div>
             </div>
-            <div class="stat-card valor">
+            <div class="stat-card">
                 <h3><i class="fas fa-money-bill-wave"></i> Valor Total</h3>
                 <div class="value" id="total-val">-</div>
-                <div class="subtitle">Valor agregado</div>
             </div>
-            <div class="stat-card itens">
+            <div class="stat-card">
                 <h3><i class="fas fa-cubes"></i> Itens</h3>
                 <div class="value" id="total-itens">-</div>
-                <div class="subtitle">Total de itens</div>
             </div>
-            <div class="stat-card municipios">
+            <div class="stat-card">
                 <h3><i class="fas fa-map-marker-alt"></i> Municípios</h3>
                 <div class="value" id="total-mun">-</div>
-                <div class="subtitle">Cidades atendidas</div>
-            </div>
-        </div>
-
-        <!-- Seção de Filtros -->
-        <div class="filters-section">
-            <h4><i class="fas fa-filter"></i> Filtros Avançados</h4>
-            
-            <div class="row g-3">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label"><i class="fas fa-sitemap"></i> Órgão</label>
-                    <select id="filtro-orgao" class="form-select">
-                        <option value="">Todos os Órgãos</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-map-pin"></i> Estado (UF)</label>
-                    <select id="filtro-uf" class="form-select">
-                        <option value="">Todos os Estados</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-building"></i> UASG</label>
-                    <select id="filtro-uasg" class="form-select">
-                        <option value="">Todos os UASG</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-gavel"></i> Tipo Pregão</label>
-                    <select id="filtro-tipo-pregao" class="form-select">
-                        <option value="">Todos os Tipos</option>
-                        <option value="eletronico">Eletrônico</option>
-                        <option value="presencial">Presencial</option>
-                        <option value="hibrido">Híbrido</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label"><i class="fas fa-industry"></i> Fornecedor</label>
-                    <select id="filtro-fornecedor" class="form-select">
-                        <option value="">Todos os Fornecedores</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-barcode"></i> Nº Pregão</label>
-                    <input type="text" id="filtro-pregao" class="form-control" 
-                           placeholder="Ex: 20250101-0001">
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button id="btn-filtrar" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Aplicar Filtros
-                </button>
-                <button id="btn-limpar-filtros" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Limpar Filtros
-                </button>
             </div>
         </div>
 
@@ -631,90 +309,23 @@
                 <table id="tabela-licitacoes" class="table">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Órgão / Localização</th>
-                            <th>Nº Pregão / ID PNCP</th>
-                            <th>Data Início</th>
-                            <th>Data Fim</th>
+                            <th>Data Resultado</th>
+                            <th>Órgão</th>
+                            <th>Nº Pregão</th>
+                            <th>Municipio</th>
                             <th>Fornecedor</th>
-                            <th>Ações</th>
+                            <th>Valor</th>
                         </tr>
                     </thead>
                     <tbody id="corpo-tabela">
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
-                                Carregando dados...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Análise de Resultados por Item -->
-        <div class="table-container" style="margin-top: 30px;">
-            <h4><i class="fas fa-box"></i> Análise por Item - Top 10</h4>
-            <div class="table-responsive">
-                <table id="tabela-itens" class="table">
-                    <thead>
-                        <tr>
-                            <th>Descrição do Item</th>
-                            <th>Qtd Total</th>
-                            <th>Valor Total</th>
-                            <th>Valor Médio</th>
-                            <th>Fornecedores</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-itens">
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
-                                Sem dados para exibir
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Análise de Resultados por Fornecedor -->
-        <div class="table-container" style="margin-top: 30px;">
-            <h4><i class="fas fa-store"></i> Ranking de Fornecedores - Top 10</h4>
-            <div class="table-responsive">
-                <table id="tabela-fornecedores" class="table">
-                    <thead>
-                        <tr>
-                            <th>Fornecedor</th>
-                            <th>CNPJ</th>
-                            <th>Itens Fornecidos</th>
-                            <th>Total de Licitações</th>
-                            <th>Valor Total</th>
-                            <th>Valor Médio</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-fornecedores">
-                        <tr>
                             <td colspan="6" class="text-center text-muted py-4">
-                                Sem dados para exibir
+                                <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
+                                Carregando dados de dados_pncp.json...
                             </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Detalhes -->
-    <div class="modal fade" id="detalhesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-search-plus"></i> Detalhes da Licitação</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="modalBody">
-                    <!-- Conteúdo dinâmico -->
-                </div>
             </div>
         </div>
     </div>
@@ -722,25 +333,18 @@
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
-        // ==================== CONFIGURAÇÃO DA API ====================
+        // ==================== CONFIGURAÇÃO ====================
         const CONFIG = {
-            // ✅ DADOS REAIS - Arquivo gerado por coleta_pncp.py
-            DADOS_LOCAL: 'dados.json', // Arquivo local com dados PNCP reais
-            USE_MOCK_DATA: false, // false = carrega dados reais | true = usa demo
-            TIMEOUT: 10000, // 10 segundos
-            RETRIES: 3,
-            AUTO_REFRESH: 60000 // Atualiza a cada 1 minuto
+            DADOS_LOCAL: 'dados_pncp.json',  // ✅ USANDO dados_pncp.json
+            TIMEOUT: 10000,
+            AUTO_REFRESH: 60000
         };
 
-        let dataTable = null;
         let dadosOriginais = [];
-        let tentativaAtual = 0;
 
-        // ==================== FUNÇÕES DE DADOS ====================
+        // ==================== FUNÇÕES UTILITÁRIAS ====================
 
         function mostrarLoading(mostrar = true) {
             const overlay = document.getElementById('loadingOverlay');
@@ -757,12 +361,11 @@
             const alertHtml = `
                 <div id="${alertId}" class="alert alert-${tipo} alert-dismissible fade show" role="alert">
                     <strong>${titulo}:</strong> ${mensagem}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', alertHtml);
             
-            // Auto-remover em 5 segundos
             setTimeout(() => {
                 const elem = document.getElementById(alertId);
                 if (elem) elem.remove();
@@ -789,737 +392,93 @@
 
         // ==================== CARREGAMENTO DOS DADOS ====================
 
-        // Carrega dados REAIS do arquivo dados.json
-        async function carregarDadosLocal() {
+        async function carregarDados() {
+            mostrarLoading(true);
+
             try {
-                console.log('📁 Carregando dados locais: ' + CONFIG.DADOS_LOCAL);
+                console.log('📁 Carregando dados de: ' + CONFIG.DADOS_LOCAL);
+                
                 const response = await fetch(CONFIG.DADOS_LOCAL + '?t=' + Date.now(), {
                     headers: { 'Accept': 'application/json' }
                 });
                 
                 if (!response.ok) {
-                    console.warn('⚠️ Arquivo dados.json não encontrado. Execute coleta_pncp.py primeiro!');
-                    return null;
+                    throw new Error('Arquivo ' + CONFIG.DADOS_LOCAL + ' não encontrado!');
                 }
                 
-                const dados = await response.json();
-                console.log('✅ ' + dados.length + ' registros carregados de dados.json');
-                exibirAlerta('success', 'Dados Reais', 'Carregados ' + dados.length + ' registros da Drogafonte via PNCP');
-                
-                // Normalizar estrutura para o dashboard
-                return dados.map(lic => ({
-                    id_pncp: lic.IdPNCP || lic.Licitacao || '',
-                    numero_pregao: lic.NumEdital || lic.Edital || '',
-                    orgao_codigo: lic.UASG || '',
-                    orgao_nome: lic.Orgao || 'N/D',
-                    uasg: lic.UASG || '',
-                    objeto: 'Fornecimento de produtos/serviços',
-                    cidade: lic.Municipio || 'N/D',
-                    uf: lic.UF || 'N/D',
-                    link_edital: lic.Link || '#',
-                    data_resultado: lic.DataResult,
-                    data_inicio_propostas: lic.DtInicioPropostas,
-                    data_fim_propostas: lic.DtFimPropostas,
-                    fornecedor: lic.Fornecedor || 'Drogafonte',
-                    cnpj_fornecedor: lic.CNPJ || '08778201000126',
-                    tipo_pregao: 'eletronico',
-                    itens: (lic.Itens || []).map(item => ({
-                        numero_item: item.Item || '',
-                        descricao: item.Desc || '',
-                        quantidade: item.Qtd || 0,
-                        valor_unitario: item.Unitario || 0,
-                        valor_total_item: item.Total || 0
-                    }))
-                }));
-            } catch (erro) {
-                console.error('❌ Erro ao carregar dados.json:', erro);
-                return null;
-            }
-        }
-
-        // Dados de teste (mock)
-        function obterDadosMock() {
-            return [
-                {
-                    'id_pncp': '08778201000126',
-                    'numero_pregao': '20250101-0001',
-                    'orgao_codigo': '26296',
-                    'orgao_nome': 'Universidade Federal de Pernambuco',
-                    'uasg': '150000',
-                    'objeto': 'Fornecimento de medicamentos',
-                    'cidade': 'Recife',
-                    'uf': 'PE',
-                    'tipo_pregao': 'eletronico',
-                    'data_inicio_propostas': '2025-01-01',
-                    'data_fim_propostas': '2025-01-03',
-                    'data_homologacao': '2025-01-05',
-                    'fornecedor': 'Farmacêutica XYZ',
-                    'cnpj_fornecedor': '12.345.678/0001-90',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Paracetamol 500mg',
-                            'quantidade': 100,
-                            'valor_unitario': 1.50,
-                            'valor_total_item': 150.00
-                        }
-                    ]
-                },
-                {
-                    'id_pncp': '08778201000127',
-                    'numero_pregao': '20250102-0002',
-                    'orgao_codigo': '26297',
-                    'orgao_nome': 'Secretaria de Educação',
-                    'uasg': '150001',
-                    'objeto': 'Material de escritório',
-                    'cidade': 'Recife',
-                    'uf': 'PE',
-                    'tipo_pregao': 'eletronico',
-                    'data_inicio_propostas': '2025-01-02',
-                    'data_fim_propostas': '2025-01-05',
-                    'data_homologacao': '2025-01-06',
-                    'fornecedor': 'Comércio ABC LTDA',
-                    'cnpj_fornecedor': '23.456.789/0001-01',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Papel A4 (resma)',
-                            'quantidade': 50,
-                            'valor_unitario': 25.00,
-                            'valor_total_item': 1250.00
-                        },
-                        {
-                            'numero_item': '002',
-                            'descricao': 'Canetas azuis',
-                            'quantidade': 500,
-                            'valor_unitario': 0.50,
-                            'valor_total_item': 250.00
-                        }
-                    ]
-                },
-                {
-                    'id_pncp': '08778201000128',
-                    'numero_pregao': '20250103-0003',
-                    'orgao_codigo': '26298',
-                    'orgao_nome': 'Prefeitura Municipal de Olinda',
-                    'uasg': '150002',
-                    'objeto': 'Serviços de limpeza',
-                    'cidade': 'Olinda',
-                    'uf': 'PE',
-                    'tipo_pregao': 'presencial',
-                    'data_inicio_propostas': '2025-01-03',
-                    'data_fim_propostas': '2025-01-07',
-                    'data_homologacao': '2025-01-08',
-                    'fornecedor': 'Limpeza Brasil SP',
-                    'cnpj_fornecedor': '34.567.890/0001-12',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Serviço de limpeza predial',
-                            'quantidade': 1,
-                            'valor_unitario': 5000.00,
-                            'valor_total_item': 5000.00
-                        }
-                    ]
-                }
-            ];
-        }
-
-        // Carregar dados da API PNCP Oficial
-        async function carregarDadosAPI() {
-            try {
-                console.log('🌐 Conectando à API PNCP Oficial');
-                
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
-
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeout);
-
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
-                }
-
                 const dados = await response.json();
                 
                 if (!Array.isArray(dados)) {
-                    throw new Error('API retornou formato inválido (não é array)');
+                    throw new Error('Dados não estão em formato de array');
                 }
 
-                console.log('✅ Dados carregados com sucesso:', dados.length, 'registros');
-                exibirAlerta('info', 'Sucesso', `${dados.length} licitações carregadas da API`);
+                console.log('✅ ' + dados.length + ' registros carregados com sucesso!');
+                exibirAlerta('success', 'Sucesso', 'Carregados ' + dados.length + ' registros de ' + CONFIG.DADOS_LOCAL);
                 
-                return dados;
+                dadosOriginais = dados;
+                atualizarTabela(dados);
+                atualizarCards(dados);
+                
+                document.getElementById('data-status').textContent = 
+                    '✅ ' + dados.length + ' registros carregados com sucesso';
 
             } catch (erro) {
-                console.error('❌ Erro ao carregar API:', erro);
-                
-                tentativaAtual++;
-                if (tentativaAtual < CONFIG.RETRIES) {
-                    console.log(`🔄 Tentativa ${tentativaAtual}/${CONFIG.RETRIES}...`);
-                    exibirAlerta('warning', 'Aviso', `Tentativa ${tentativaAtual}/${CONFIG.RETRIES} de reconexão...`);
-                    
-                    // Aguardar 2 segundos antes de tentar novamente
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    return carregarDadosAPI();
-                } else {
-                    console.error('❌ Todas as tentativas falharam');
-                    exibirAlerta('danger', 'Erro de Conexão', 
-                        'Não foi possível conectar à API. Usando dados de demonstração.');
-                    return null;
-                }
-            }
-        }
-
-        // Função principal de carregamento
-        async function carregarDados() {
-            mostrarLoading(true);
-            tentativaAtual = 0;
-
-            try {
-                let dados = null;
-
-                // ✅ PRIORIDADE 1: Dados locais (dados.json - REAL)
-                console.log('📁 Tentando dados.json (dados reais do PNCP)...');
-                dados = await carregarDadosLocal();
-
-                // ✅ PRIORIDADE 2: API oficial
-                if (!dados) {
-                    console.log('🌐 Tentando API PNCP Oficial...');
-                    dados = await carregarDadosAPI();
-                }
-
-                // ✅ PRIORIDADE 3: Dados demo
-                if (!dados) {
-                    if (CONFIG.USE_MOCK_DATA) {
-                        console.log('📊 Usando dados de demonstração');
-                        exibirAlerta('warning', 'Modo Demo', 'Execute: python coleta_pncp.py para dados reais');
-                        dados = obterDadosMock();
-                    }
-                }
-
-                // Processar dados REAIS
-                if (dados && dados.length > 0) {
-                    dadosOriginais = [...dados];
-                    preencherFiltros(dados);
-                    atualizarTabela(dados);
-                    analisarResultadosItens(dados);
-                    analisarResultadosFornecedores(dados);
-                    console.log('✅ ' + dados.length + ' licitações reais carregadas');
-                    
-                    // Auto-refresh
-                    setTimeout(() => {
-                        console.log('🔄 Auto-refresh em ' + (CONFIG.AUTO_REFRESH/1000) + 's...');
-                        carregarDados();
-                    }, CONFIG.AUTO_REFRESH);
-                } else {
-                    exibirAlerta('danger', '⚠️ Sem Dados', 'Execute: python coleta_pncp.py --output dados.json');
-                    atualizarCards(0, 0, 0, 0);
-                }
-
-            } catch (erro) {
-                console.error('❌ Erro crítico:', erro);
-                exibirAlerta('danger', '❌ Erro', erro.message);
-                atualizarCards(0, 0, 0, 0);
+                console.error('❌ Erro:', erro);
+                exibirAlerta('danger', 'Erro', erro.message + ' - Verifique se o arquivo ' + CONFIG.DADOS_LOCAL + ' existe.');
+                document.getElementById('data-status').textContent = '❌ Erro ao carregar dados: ' + erro.message;
             } finally {
                 mostrarLoading(false);
             }
         }
 
-        // ==================== PREENCHIMENTO DE FILTROS ====================
-
-        function preencherFiltros(data) {
-            const orgaos = new Set();
-            const ufs = new Set();
-            const uasgs = new Set();
-            const fornecedores = new Set();
-
-            data.forEach(lic => {
-                if (lic.orgao_nome) orgaos.add(lic.orgao_nome);
-                if (lic.uf) ufs.add(lic.uf);
-                if (lic.uasg) uasgs.add(lic.uasg);
-                if (lic.fornecedor) fornecedores.add(lic.fornecedor);
-            });
-
-            // Preencher Órgãos
-            const selectOrgao = document.getElementById('filtro-orgao');
-            selectOrgao.innerHTML = '<option value="">Todos os Órgãos</option>';
-            Array.from(orgaos).sort().forEach(orgao => {
-                const option = document.createElement('option');
-                option.value = orgao;
-                option.textContent = orgao;
-                selectOrgao.appendChild(option);
-            });
-
-            // Preencher UFs
-            const selectUf = document.getElementById('filtro-uf');
-            selectUf.innerHTML = '<option value="">Todos os Estados</option>';
-            Array.from(ufs).sort().forEach(uf => {
-                const option = document.createElement('option');
-                option.value = uf;
-                option.textContent = uf;
-                selectUf.appendChild(option);
-            });
-
-            // Preencher UASGs
-            const selectUasg = document.getElementById('filtro-uasg');
-            selectUasg.innerHTML = '<option value="">Todos os UASG</option>';
-            Array.from(uasgs).sort().forEach(uasg => {
-                const option = document.createElement('option');
-                option.value = uasg;
-                option.textContent = uasg;
-                selectUasg.appendChild(option);
-            });
-
-            // Preencher Fornecedores
-            const selectFornecedor = document.getElementById('filtro-fornecedor');
-            selectFornecedor.innerHTML = '<option value="">Todos os Fornecedores</option>';
-            Array.from(fornecedores).sort().forEach(fornecedor => {
-                const option = document.createElement('option');
-                option.value = fornecedor;
-                option.textContent = fornecedor;
-                selectFornecedor.appendChild(option);
-            });
-        }
-
-        // ==================== APLICAÇÃO DE FILTROS ====================
-
-        function aplicarFiltros() {
-            const filtroOrgao = document.getElementById('filtro-orgao').value;
-            const filtroUf = document.getElementById('filtro-uf').value;
-            const filtroUasg = document.getElementById('filtro-uasg').value;
-            const filtroFornecedor = document.getElementById('filtro-fornecedor').value;
-            const filtroPregao = document.getElementById('filtro-pregao').value.toLowerCase();
-            const filtroTipoPregao = document.getElementById('filtro-tipo-pregao').value;
-
-            const dadosFiltrados = dadosOriginais.filter(lic => {
-                const matchOrgao = !filtroOrgao || lic.orgao_nome === filtroOrgao;
-                const matchUf = !filtroUf || lic.uf === filtroUf;
-                const matchUasg = !filtroUasg || lic.uasg === filtroUasg;
-                const matchFornecedor = !filtroFornecedor || lic.fornecedor === filtroFornecedor;
-                const matchTipoPregao = !filtroTipoPregao || lic.tipo_pregao === filtroTipoPregao;
-                const matchPregao = !filtroPregao || 
-                    (lic.numero_pregao && lic.numero_pregao.toLowerCase().includes(filtroPregao)) ||
-                    (lic.id_pncp && lic.id_pncp.toLowerCase().includes(filtroPregao));
-
-                return matchOrgao && matchUf && matchUasg && matchFornecedor && matchTipoPregao && matchPregao;
-            });
-
-            atualizarTabela(dadosFiltrados);
-            analisarResultadosItens(dadosFiltrados);
-            analisarResultadosFornecedores(dadosFiltrados);
-        }
-
-        function limparFiltros() {
-            document.getElementById('filtro-orgao').value = '';
-            document.getElementById('filtro-uf').value = '';
-            document.getElementById('filtro-uasg').value = '';
-            document.getElementById('filtro-fornecedor').value = '';
-            document.getElementById('filtro-tipo-pregao').value = '';
-            document.getElementById('filtro-pregao').value = '';
-            atualizarTabela(dadosOriginais);
-            analisarResultadosItens(dadosOriginais);
-            analisarResultadosFornecedores(dadosOriginais);
-        }
-
-        // ==================== ATUALIZAÇÃO DA TABELA ====================
+        // ==================== ATUALIZAR TABELA ====================
 
         function atualizarTabela(dados) {
-            let totalValor = 0;
-            let totalItens = 0;
-            const municipios = new Set();
-
-            const corpo = document.getElementById('corpo-tabela');
-            corpo.innerHTML = '';
-
-            if (dados.length === 0) {
-                corpo.innerHTML = `
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-message">
-                                <i class="fas fa-search"></i>
-                                <p>Nenhuma licitação encontrada com esses filtros</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                
-                atualizarCards(0, 0, 0, 0);
-                
-                if (dataTable) {
-                    dataTable.destroy();
-                }
-                dataTable = $('#tabela-licitacoes').DataTable({
-                    language: {
-                        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
-                    }
-                });
-                return;
-            }
-
-            dados.forEach(lic => {
-                municipios.add((lic.cidade || 'N/D') + '/' + (lic.uf || 'N/D'));
-
-                const fornecedor = lic.fornecedor || 'N/D';
-
-                if (lic.itens && lic.itens.length > 0) {
-                    lic.itens.forEach(it => {
-                        const valor = parseFloat(it.valor_total_item || 0);
-                        totalValor += valor;
-                        totalItens++;
-                    });
-                }
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <small>${formatarData(lic.data_homologacao)}</small>
-                    </td>
-                    <td>
-                        <strong>${lic.orgao_nome || 'N/D'}</strong><br>
-                        <small class="text-muted">${lic.cidade || 'N/D'}, ${lic.uf || 'N/D'}</small>
-                    </td>
-                    <td>
-                        <code>${lic.id_pncp || lic.numero_pregao || 'N/D'}</code>
-                    </td>
-                    <td>${formatarData(lic.data_inicio_propostas)}</td>
-                    <td>${formatarData(lic.data_fim_propostas)}</td>
-                    <td>
-                        <span class="badge bg-success">${fornecedor}</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary detalhes-btn" 
-                                onclick="abrirDetalhes('${lic.id_pncp}')">
-                            <i class="fas fa-eye"></i> Detalhes
-                        </button>
-                    </td>
-                `;
-                row.dataset.licData = JSON.stringify(lic);
-                corpo.appendChild(row);
-            });
-
-            atualizarCards(dados.length, totalValor, totalItens, municipios.size);
-
-            if (dataTable) {
-                dataTable.destroy();
-            }
-            dataTable = $('#tabela-licitacoes').DataTable({
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
-                },
-                order: [[0, 'desc']],
-                pageLength: 10,
-                responsive: true
-            });
-        }
-
-        function atualizarCards(totalLic, totalVal, totalIt, totalMun) {
-            document.getElementById('total-lic').innerText = totalLic.toLocaleString('pt-BR');
-            document.getElementById('total-val').innerText = formatarMoeda(totalVal);
-            document.getElementById('total-itens').innerText = totalIt.toLocaleString('pt-BR');
-            document.getElementById('total-mun').innerText = totalMun;
-        }
-
-        // ==================== MODAL DE DETALHES ====================
-
-        function abrirDetalhes(idPncp) {
-            const licData = dadosOriginais.find(lic => lic.id_pncp === idPncp);
+            const tbody = document.getElementById('corpo-tabela');
             
-            if (!licData) {
-                alert('Licitação não encontrada');
+            if (!dados || dados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Sem dados para exibir</td></tr>';
                 return;
             }
 
-            let tabelaItensHtml = '';
-            if (licData.itens && licData.itens.length > 0) {
-                tabelaItensHtml = `
-                    <h6 class="mt-4 mb-3">
-                        <i class="fas fa-list"></i> Itens da Licitação
-                    </h6>
-                    <table class="table table-modal table-sm">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Descrição</th>
-                                <th>Qtd</th>
-                                <th>Valor Unit.</th>
-                                <th>Valor Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${licData.itens.map(item => `
-                                <tr>
-                                    <td>${item.numero_item || '-'}</td>
-                                    <td>${item.descricao || '-'}</td>
-                                    <td>${item.quantidade || 0}</td>
-                                    <td>${formatarMoeda(item.valor_unitario)}</td>
-                                    <td><strong>${formatarMoeda(item.valor_total_item)}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-            }
-
-            const html = `
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">ID PNCP</span>
-                        <span class="detail-value">${licData.id_pncp || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Nº Pregão</span>
-                        <span class="detail-value">${licData.numero_pregao || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">Órgão</span>
-                        <span class="detail-value">${licData.orgao_nome || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Cidade</span>
-                        <span class="detail-value">${licData.cidade || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Estado</span>
-                        <span class="detail-value">${licData.uf || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">UASG</span>
-                        <span class="detail-value">${licData.uasg || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Código Órgão</span>
-                        <span class="detail-value">${licData.orgao_codigo || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">Objeto</span>
-                        <span class="detail-value">${licData.objeto || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Data Início</span>
-                        <span class="detail-value">${formatarData(licData.data_inicio_propostas)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Data Fim</span>
-                        <span class="detail-value">${formatarData(licData.data_fim_propostas)}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Data Homologação</span>
-                        <span class="detail-value">${formatarData(licData.data_homologacao)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Fornecedor Principal</span>
-                        <span class="detail-value">${licData.fornecedor || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">CNPJ Fornecedor</span>
-                        <span class="detail-value">${licData.cnpj_fornecedor || 'N/D'}</span>
-                    </div>
-                </div>
-
-                ${tabelaItensHtml}
-            `;
-
-            document.getElementById('modalBody').innerHTML = html;
-            const modal = new bootstrap.Modal(document.getElementById('detalhesModal'));
-            modal.show();
+            tbody.innerHTML = dados.map(lic => `
+                <tr>
+                    <td>${formatarData(lic.DataResult)}</td>
+                    <td>${lic.Orgao || 'N/D'}</td>
+                    <td>${lic.NumEdital || 'N/D'}</td>
+                    <td>${lic.Municipio || 'N/D'}</td>
+                    <td>${lic.Fornecedor || 'N/D'}</td>
+                    <td>${formatarMoeda(lic.ValorTotal || 0)}</td>
+                </tr>
+            `).join('');
         }
 
-        // ==================== ANÁLISE DE RESULTADOS POR ITEM ====================
+        // ==================== ATUALIZAR CARDS ====================
 
-        function analisarResultadosItens(dados) {
-            const itensMap = new Map();
-
-            dados.forEach(lic => {
-                if (lic.itens && lic.itens.length > 0) {
-                    lic.itens.forEach(item => {
-                        const chave = item.descricao || 'N/D';
-                        
-                        if (!itensMap.has(chave)) {
-                            itensMap.set(chave, {
-                                descricao: chave,
-                                quantidade_total: 0,
-                                valor_total: 0,
-                                fornecedores: new Set(),
-                                ocorrencias: 0
-                            });
-                        }
-
-                        const registro = itensMap.get(chave);
-                        registro.quantidade_total += parseFloat(item.quantidade || 0);
-                        registro.valor_total += parseFloat(item.valor_total_item || 0);
-                        registro.ocorrencias++;
-                        if (lic.fornecedor) {
-                            registro.fornecedores.add(lic.fornecedor);
-                        }
-                    });
-                }
-            });
-
-            // Converter para array, ordenar e pegar top 10
-            const itensOrdenados = Array.from(itensMap.values())
-                .sort((a, b) => b.valor_total - a.valor_total)
-                .slice(0, 10);
-
-            // Renderizar tabela
-            const corpo = document.getElementById('corpo-itens');
-            corpo.innerHTML = '';
-
-            if (itensOrdenados.length === 0) {
-                corpo.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-4">
-                            <i class="fas fa-inbox"></i> Nenhum item encontrado
-                        </td>
-                    </tr>
-                `;
+        function atualizarCards(dados) {
+            if (!dados || dados.length === 0) {
+                document.getElementById('total-lic').textContent = '0';
+                document.getElementById('total-val').textContent = 'R$ 0,00';
+                document.getElementById('total-itens').textContent = '0';
+                document.getElementById('total-mun').textContent = '0';
                 return;
             }
 
-            itensOrdenados.forEach(item => {
-                const valorMedio = item.ocorrencias > 0 ? item.valor_total / item.ocorrencias : 0;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <strong>${item.descricao}</strong>
-                    </td>
-                    <td>
-                        <span class="badge bg-info">${item.quantidade_total.toLocaleString('pt-BR')}</span>
-                    </td>
-                    <td>
-                        <strong>${formatarMoeda(item.valor_total)}</strong>
-                    </td>
-                    <td>
-                        ${formatarMoeda(valorMedio)}
-                    </td>
-                    <td>
-                        <small class="text-muted">${item.fornecedores.size} fornecedor(es)</small>
-                    </td>
-                `;
-                corpo.appendChild(row);
-            });
+            const totalLicitacoes = dados.length;
+            const totalValor = dados.reduce((sum, lic) => sum + (parseFloat(lic.ValorTotal) || 0), 0);
+            const totalItens = dados.reduce((sum, lic) => sum + (lic.Itens ? lic.Itens.length : 0), 0);
+            const municipios = new Set(dados.map(lic => lic.Municipio).filter(m => m));
+
+            document.getElementById('total-lic').textContent = totalLicitacoes;
+            document.getElementById('total-val').textContent = formatarMoeda(totalValor);
+            document.getElementById('total-itens').textContent = totalItens;
+            document.getElementById('total-mun').textContent = municipios.size;
         }
 
-        // ==================== ANÁLISE DE RESULTADOS POR FORNECEDOR ====================
-
-        function analisarResultadosFornecedores(dados) {
-            const fornecedoresMap = new Map();
-
-            dados.forEach(lic => {
-                const chave = lic.fornecedor || 'N/D';
-                
-                if (!fornecedoresMap.has(chave)) {
-                    fornecedoresMap.set(chave, {
-                        nome: chave,
-                        cnpj: lic.cnpj_fornecedor || 'N/D',
-                        total_itens: 0,
-                        total_licitacoes: 0,
-                        valor_total: 0,
-                        itens_unicos: new Set()
-                    });
-                }
-
-                const registro = fornecedoresMap.get(chave);
-                registro.total_licitacoes++;
-
-                if (lic.itens && lic.itens.length > 0) {
-                    lic.itens.forEach(item => {
-                        registro.total_itens++;
-                        registro.valor_total += parseFloat(item.valor_total_item || 0);
-                        registro.itens_unicos.add(item.descricao);
-                    });
-                }
-            });
-
-            // Converter para array, ordenar e pegar top 10
-            const fornecedoresOrdenados = Array.from(fornecedoresMap.values())
-                .sort((a, b) => b.valor_total - a.valor_total)
-                .slice(0, 10);
-
-            // Renderizar tabela
-            const corpo = document.getElementById('corpo-fornecedores');
-            corpo.innerHTML = '';
-
-            if (fornecedoresOrdenados.length === 0) {
-                corpo.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            <i class="fas fa-store"></i> Nenhum fornecedor encontrado
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            fornecedoresOrdenados.forEach(forn => {
-                const valorMedio = forn.total_licitacoes > 0 ? forn.valor_total / forn.total_licitacoes : 0;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <strong>${forn.nome}</strong>
-                    </td>
-                    <td>
-                        <code style="font-size: 0.75rem;">${forn.cnpj}</code>
-                    </td>
-                    <td>
-                        <span class="badge bg-success">${forn.itens_unicos.size}</span>
-                    </td>
-                    <td>
-                        <span class="badge bg-info">${forn.total_licitacoes}</span>
-                    </td>
-                    <td>
-                        <strong>${formatarMoeda(forn.valor_total)}</strong>
-                    </td>
-                    <td>
-                        ${formatarMoeda(valorMedio)}
-                    </td>
-                `;
-                corpo.appendChild(row);
-            });
-        }
-
-        // ==================== EVENT LISTENERS ====================
-
-        document.getElementById('btn-filtrar').addEventListener('click', aplicarFiltros);
-        document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
-
-        document.getElementById('filtro-pregao').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') aplicarFiltros();
-        });
-
-        // ==================== INICIALIZAÇÃO ====================
+        // ==================== INICIAR ====================
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Dashboard iniciando...');
-            console.log('Configuração:', CONFIG);
             carregarDados();
         });
     </script>
