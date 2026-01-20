@@ -1,9 +1,9 @@
-name: Robô PNCP Automático
+name: 🤖 Robô PNCP Automático
 
 on:
   schedule:
     - cron: '0 */2 * * *'  # A cada 2 horas (00:00, 02:00, 04:00, etc. UTC)
-  workflow_dispatch:     # Botão manual no GitHub
+  workflow_dispatch:       # Botão manual no GitHub
 
 # CRÍTICO: impede que 2 execuções rodem ao mesmo tempo (evita conflito no JSON/checkpoint)
 concurrency:
@@ -18,22 +18,22 @@ jobs:
       contents: write  # Permite commit/push automático
 
     steps:
-      - name: 1. Checkout do Repositório
+      - name: 📥 1. Checkout do Repositório
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Histórico completo para evitar conflitos no git push
 
-      - name: 2. Configurar Python 3.11
+      - name: 🐍 2. Configurar Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 3. Instalar Dependências
+      - name: 📦 3. Instalar Dependências
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests beautifulsoup4
 
-      - name: 4. Sincronizar Checkpoint e Executar Coleta
+      - name: 🔄 4. Sincronizar Checkpoint e Executar Coleta
         run: |
           # Puxa mudanças recentes (checkpoint mais atual)
           git pull origin main --rebase || echo "Repositório já atualizado"
@@ -48,18 +48,70 @@ jobs:
           # Executa coleta (usa checkpoint interno)
           python coleta_pncp.py
 
-      - name: 5. Commit e Push (se houver mudanças)
+      - name: ⚙️ 5. Configurar Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
+      - name: 🔎 6. Verificar Mudanças
+        id: check-changes
+        run: |
           git add dados_pncp.json checkpoint.txt
           
-          # Só commit se houver mudança real
           if git diff --cached --quiet; then
+            echo "status=no-changes" >> $GITHUB_OUTPUT
             echo "✅ Nenhuma mudança nova. Checkpoint mantido."
-            exit 0
+          else
+            echo "status=has-changes" >> $GITHUB_OUTPUT
+            echo "📝 Mudanças detectadas. Preparando commit..."
           fi
+
+      - name: 📤 7. Commit e Push
+        if: steps.check-changes.outputs.status == 'has-changes'
+        run: |
+          CHECKPOINT=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
+          TIMESTAMP=$(date '+%d/%m %H:%M')
           
-          git commit -m "🤖 PNCP: $(cat checkpoint.txt) | $(date '+%d/%m %H:%M')"
-          git push origin main
+          git commit -m "🤖 PNCP: $CHECKPOINT | $TIMESTAMP"
+          
+          # Push com retry (até 3 tentativas)
+          max_attempts=3
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            if git push origin main; then
+              echo "✅ Push realizado com sucesso!"
+              break
+            else
+              echo "⚠️ Tentativa $attempt de $max_attempts falhada"
+              if [ $attempt -lt $max_attempts ]; then
+                echo "🔄 Aguardando 5 segundos e tentando novamente..."
+                sleep 5
+                git pull --rebase origin main || true
+              fi
+            fi
+            ((attempt++))
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Falha ao fazer push após $max_attempts tentativas"
+            exit 1
+          fi
+
+      - name: ✅ 8. Sucesso
+        if: success()
+        run: |
+          echo "🎉 Workflow executado com sucesso!"
+          if [ -f "dados_pncp.json" ]; then
+            echo "📊 Dados salvos em dados_pncp.json"
+          fi
+          if [ -f "checkpoint.txt" ]; then
+            echo "🔖 Checkpoint: $(cat checkpoint.txt)"
+          fi
+
+      - name: ❌ 9. Erro
+        if: failure()
+        run: |
+          echo "⚠️ Workflow falhou!"
+          echo "🔍 Verifique os logs acima para mais detalhes"
+          exit 1
