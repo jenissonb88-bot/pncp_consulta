@@ -276,7 +276,7 @@ while data_atual <= data_fim:
                         itens_licitacao_novos
                     )
                     
-                    banco_total[chape]["itens_todos_fornecedores"] = merge_itens(
+                    banco_total[chave]["itens_todos_fornecedores"] = merge_itens(
                         banco_total[chave]["itens_todos_fornecedores"],
                         itens_todos_novos
                     )
