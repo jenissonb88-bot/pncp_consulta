@@ -3,1225 +3,357 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard PNCP - Licitações Públicas</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>Painel PNCP Sniper 2026 - Licitações e Pregões</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px 0;
-        }
-
-        .container-custom {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 15px;
-        }
-
-        /* Header */
-        .header {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .header h1 i {
-            color: #667eea;
-        }
-
-        .header p {
-            color: #666;
-            margin: 0;
-            font-size: 0.95rem;
-        }
-
-        /* Alert */
-        .alert {
-            border-radius: 8px;
-            border: none;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-        }
-
-        .alert-danger {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        /* Cards de Estatísticas */
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border-left: 5px solid #667eea;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .stat-card.valor {
-            border-left-color: #28a745;
-        }
-
-        .stat-card.itens {
-            border-left-color: #ffc107;
-        }
-
-        .stat-card.municipios {
-            border-left-color: #17a2b8;
-        }
-
-        .stat-card.licitacoes {
-            border-left-color: #667eea;
-        }
-
-        .stat-card h3 {
-            color: #999;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .stat-card .value {
-            color: #333;
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .stat-card .subtitle {
-            color: #999;
-            font-size: 0.8rem;
-        }
-
-        /* Seção de Filtros */
-        .filters-section {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .filters-section h4 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filters-section h4 i {
-            color: #667eea;
-            font-size: 1.2rem;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .form-select,
-        .form-control {
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            background-color: white;
-            color: #333;
-            font-size: 0.9rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-select:focus,
-        .form-control:focus {
-            border-color: #667eea;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-select {
-            cursor: pointer;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            color: white;
-            text-decoration: none;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.8rem;
-        }
-
-        .btn-outline-primary {
-            border: 2px solid #667eea;
-            color: #667eea;
-            background: white;
-        }
-
-        .btn-outline-primary:hover {
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-        }
-
-        /* Tabela */
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow-x: auto;
-        }
-
-        .table-container h4 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .table-container h4 i {
-            color: #667eea;
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-            color: #333;
-            font-weight: 700;
-            padding: 15px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 0.9rem;
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .badge.bg-success {
-            background: #28a745 !important;
-        }
-
-        .badge.bg-info {
-            background: #17a2b8 !important;
-        }
-
-        code {
-            background: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #667eea;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .text-muted {
-            color: #999;
-            font-size: 0.85rem;
-        }
-
-        /* Modal de Detalhes */
-        .modal-content {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom: none;
-            border-radius: 12px 12px 0 0;
-        }
-
-        .modal-header .btn-close {
-            filter: brightness(0) invert(1);
-        }
-
-        .modal-body {
-            padding: 25px;
-        }
-
-        .detail-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .detail-row.full {
-            grid-template-columns: 1fr;
-        }
-
-        .detail-item {
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .detail-label {
-            color: #999;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            display: block;
-        }
-
-        .detail-value {
-            color: #333;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .table-modal {
-            margin-top: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .table-modal thead {
-            background: #f8f9fa;
-        }
-
-        .table-modal thead th {
-            padding: 12px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .table-modal tbody td {
-            padding: 10px 12px;
-            font-size: 0.8rem;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .table-modal tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Mensagem vazia */
-        .empty-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-message i {
-            font-size: 3rem;
-            opacity: 0.3;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        /* Responsivo */
-        @media (max-width: 768px) {
-            .stats-cards {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .detail-row {
-                grid-template-columns: 1fr;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .table-container {
-                padding: 15px;
-            }
-
-            .table thead th,
-            .table tbody td {
-                padding: 10px;
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Loading spinner */
-        .spinner-border {
-            width: 2rem;
-            height: 2rem;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .loading-overlay.show {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .api-config {
-            background: #e7f3ff;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        .api-config strong {
-            color: #1976d2;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
+        .header-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card-licitacao { border: none; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; transition: transform 0.2s; background: white; }
+        .card-licitacao:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .status-badge { font-size: 0.8rem; padding: 0.4em 0.8em; border-radius: 20px; font-weight: 600; }
+        .status-venceu { background-color: #d1e7dd; color: #0f5132; }
+        .status-eletronico { background-color: #cfe2ff; color: #084298; }
+        .valor-total { font-size: 1.1rem; font-weight: 700; color: #198754; }
+        .btn-expandir { border-radius: 20px; font-size: 0.9rem; }
+        .table-itens th { background-color: #f8f9fa; font-size: 0.85rem; text-transform: uppercase; color: #6c757d; }
+        .table-itens td { vertical-align: middle; font-size: 0.9rem; }
+        .info-prazos { background-color: #e7f3ff; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid #667eea; }
+        .info-label { font-size: 0.75rem; text-transform: uppercase; color: #6c757d; font-weight: 700; display: block; margin-bottom: 2px; }
+        .info-value { font-size: 0.95rem; font-weight: 600; color: #212529; }
+        .num-pregao-destaque { font-size: 1.2rem; color: #667eea; font-weight: 800; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .id-pncp { font-family: 'Courier New', monospace; color: #666; font-size: 0.85rem; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        .badge-uasg { background-color: #6c757d; color: white; font-size: 0.75rem; vertical-align: middle; margin-left: 8px; }
+        .pregao-eletronico { border-left: 4px solid #0dcaf0 !important; }
+        #loading { display: none; }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner-border text-light" role="status">
-            <span class="visually-hidden">Carregando...</span>
-        </div>
-    </div>
 
-    <div class="container-custom">
-        <!-- Header -->
-        <div class="header">
-            <h1><i class="fas fa-gavel"></i> Dashboard PNCP</h1>
-            <p>Análise de Licitações Públicas em Tempo Real</p>
-        </div>
-
-        <!-- Alert de Configuração -->
-        <div id="alertas-container"></div>
-
-        <!-- Cards de Estatísticas -->
-        <div class="stats-cards">
-            <div class="stat-card licitacoes">
-                <h3><i class="fas fa-file-contract"></i> Licitações</h3>
-                <div class="value" id="total-lic">-</div>
-                <div class="subtitle">Total de processos</div>
-            </div>
-            <div class="stat-card valor">
-                <h3><i class="fas fa-money-bill-wave"></i> Valor Total</h3>
-                <div class="value" id="total-val">-</div>
-                <div class="subtitle">Valor agregado</div>
-            </div>
-            <div class="stat-card itens">
-                <h3><i class="fas fa-cubes"></i> Itens</h3>
-                <div class="value" id="total-itens">-</div>
-                <div class="subtitle">Total de itens</div>
-            </div>
-            <div class="stat-card municipios">
-                <h3><i class="fas fa-map-marker-alt"></i> Municípios</h3>
-                <div class="value" id="total-mun">-</div>
-                <div class="subtitle">Cidades atendidas</div>
-            </div>
-        </div>
-
-        <!-- Seção de Filtros -->
-        <div class="filters-section">
-            <h4><i class="fas fa-filter"></i> Filtros Avançados</h4>
-            
-            <div class="row g-3">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label"><i class="fas fa-sitemap"></i> Órgão</label>
-                    <select id="filtro-orgao" class="form-select">
-                        <option value="">Todos os Órgãos</option>
-                    </select>
+    <div class="header-bg">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="fw-bold mb-0"><i class="fas fa-gavel me-2"></i>Painel PNCP Sniper 2026</h1>
+                    <p class="mb-0 opacity-75">Monitoramento de Pregões Eletrônicos e Licitações Públicas</p>
                 </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-map-pin"></i> Estado (UF)</label>
-                    <select id="filtro-uf" class="form-select">
-                        <option value="">Todos os Estados</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-building"></i> UASG</label>
-                    <select id="filtro-uasg" class="form-select">
-                        <option value="">Todos os UASG</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label"><i class="fas fa-industry"></i> Fornecedor</label>
-                    <select id="filtro-fornecedor" class="form-select">
-                        <option value="">Todos os Fornecedores</option>
-                    </select>
-                </div>
-
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label"><i class="fas fa-barcode"></i> Nº Pregão</label>
-                    <input type="text" id="filtro-pregao" class="form-control" 
-                           placeholder="Ex: 20250101-0001">
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button id="btn-filtrar" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Aplicar Filtros
-                </button>
-                <button id="btn-limpar-filtros" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Limpar Filtros
-                </button>
-            </div>
-        </div>
-
-        <!-- Tabela -->
-        <div class="table-container">
-            <h4><i class="fas fa-table"></i> Licitações Públicas</h4>
-            
-            <div class="table-responsive">
-                <table id="tabela-licitacoes" class="table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Órgão / Localização</th>
-                            <th>Nº Pregão / ID PNCP</th>
-                            <th>Data Início</th>
-                            <th>Data Fim</th>
-                            <th>Fornecedor</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-tabela">
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
-                                Carregando dados...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Detalhes -->
-    <div class="modal fade" id="detalhesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-search-plus"></i> Detalhes da Licitação</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="modalBody">
-                    <!-- Conteúdo dinâmico -->
+                <div class="text-end">
+                    <span class="badge bg-light text-primary fs-6" id="total-valor">R$ 0,00</span>
+                    <div class="small mt-1 text-white-50" id="last-update">Atualizando...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <div class="container mb-5">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <div class="text-muted small text-uppercase fw-bold">Pregões Monitorados</div>
+                    <div class="h2 mb-0 fw-bold text-primary" id="count-pregoes">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <div class="text-muted small text-uppercase fw-bold">Itens Licitados</div>
+                    <div class="h2 mb-0 fw-bold text-success" id="count-itens">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <div class="text-muted small text-uppercase fw-bold">Municípios</div>
+                    <div class="h2 mb-0 fw-bold text-info" id="count-municipios">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="searchInput" class="form-control form-control-lg border-0 shadow-sm" placeholder="🔍 Buscar Nº Pregão, Órgão, Cidade ou UASG...">
+            </div>
+        </div>
+
+        <div id="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando dados PNCP...</p>
+        </div>
+
+        <div id="container-licitacoes"></div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
-        // ==================== CONFIGURAÇÃO DA API ====================
-        const CONFIG = {
-            // Altere para sua URL real
-            API_URL: 'https://api.pncp.gov.br/v1/licitacoes', // ALTERE AQUI!
-            USE_MOCK_DATA: true, // true = dados de teste | false = API real
-            TIMEOUT: 10000, // 10 segundos
-            RETRIES: 3
+        // Formata Moeda
+        const formatMoney = (value) => {
+            return parseFloat(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         };
 
-        let dataTable = null;
-        let dadosOriginais = [];
-        let tentativaAtual = 0;
-
-        // ==================== FUNÇÕES DE DADOS ====================
-
-        function mostrarLoading(mostrar = true) {
-            const overlay = document.getElementById('loadingOverlay');
-            if (mostrar) {
-                overlay.classList.add('show');
-            } else {
-                overlay.classList.remove('show');
-            }
-        }
-
-        function exibirAlerta(tipo, titulo, mensagem) {
-            const container = document.getElementById('alertas-container');
-            const alertId = 'alert-' + Date.now();
-            const alertHtml = `
-                <div id="${alertId}" class="alert alert-${tipo} alert-dismissible fade show" role="alert">
-                    <strong>${titulo}:</strong> ${mensagem}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', alertHtml);
-            
-            // Auto-remover em 5 segundos
-            setTimeout(() => {
-                const elem = document.getElementById(alertId);
-                if (elem) elem.remove();
-            }, 5000);
-        }
-
-        function formatarData(data) {
-            if (!data) return 'N/D';
+        // Formata Data
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '<span class="text-muted">N/D</span>';
             try {
-                const d = new Date(data);
-                return d.toLocaleDateString('pt-BR');
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR') + '<br><small>' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) + '</small>';
             } catch {
-                return data;
+                return dateStr;
+            }
+        };
+
+        let dadosGlobais = [];
+
+        // Dados reais PNCP + mock expandidos
+        async function carregarDados() {
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                // Tenta API real primeiro
+                const response = await fetch('https://api.pncp.gov.br/v1/licitacoes?_limit=50', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                let dados = [];
+                if (response.ok) {
+                    dados = await response.json();
+                } else {
+                    // Fallback mock com dados reais do usuário + mais exemplos
+                    dados = obterDadosMock();
+                }
+
+                dadosGlobais = dados;
+                dadosGlobais.sort((a, b) => new Date(b.data_resultado || b.data_homologacao) - new Date(a.data_resultado || a.data_homologacao));
+
+                atualizarDashboard(dadosGlobais);
+                renderizarLista(dadosGlobais);
+                
+            } catch (error) {
+                console.error('Erro API:', error);
+                dadosGlobais = obterDadosMock();
+                atualizarDashboard(dadosGlobais);
+                renderizarLista(dadosGlobais);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
             }
         }
 
-        function formatarMoeda(valor) {
-            if (!valor) return 'R$ 0,00';
-            return parseFloat(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            });
-        }
-
-        // ==================== CARREGAMENTO DOS DADOS ====================
-
-        // Dados de teste (mock)
+        // Dados mock expandidos com formato real PNCP
         function obterDadosMock() {
             return [
                 {
-                    'id_pncp': '08778201000126',
-                    'numero_pregao': '20250101-0001',
-                    'orgao_codigo': '26296',
-                    'orgao_nome': 'Universidade Federal de Pernambuco',
-                    'uasg': '150000',
-                    'objeto': 'Fornecimento de medicamentos',
-                    'cidade': 'Recife',
-                    'uf': 'PE',
-                    'data_inicio_propostas': '2025-01-01',
-                    'data_fim_propostas': '2025-01-03',
-                    'data_homologacao': '2025-01-05',
-                    'fornecedor': 'Farmacêutica XYZ',
-                    'cnpj_fornecedor': '12.345.678/0001-90',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Paracetamol 500mg',
-                            'quantidade': 100,
-                            'valor_unitario': 1.50,
-                            'valor_total_item': 150.00
-                        }
+                    "id_licitacao": "08084014000142000572024",
+                    "numero_pregao": "25/2024",
+                    "orgao_nome": "MUNICIPIO DE CAMPO GRANDE",
+                    "orgao_codigo": "08084014000142",
+                    "uasg": "08084014000142",
+                    "cidade": "Campo Grande",
+                    "uf": "RN",
+                    "objeto": "AQUISIÇÃO DE MATERIAIS PERMANENTE DESTINADOS AO DESENVOLVIMENTO DO ENSINO FUNDAMENTAL DAS ESCOLAS MUNICIPAIS DE CAMPO GRANDE/RN.",
+                    "link_edital": "https://pncp.gov.br/app/editais/08084014000142/2024/57",
+                    "data_resultado": "2025-01-02T04:11:23",
+                    "data_inicio_propostas": null,
+                    "data_fim_propostas": null,
+                    "id_pncp": null,
+                    "cnpj_fornecedor": "08778201000126",
+                    "tipo": "eletronico",
+                    "itens": [
+                        {"numero_item": "001", "descricao": "Materiais permanentes educação", "quantidade": 50, "valor_unitario": 250.00, "valor_total": 12500.00}
                     ]
                 },
                 {
-                    'id_pncp': '08778201000127',
-                    'numero_pregao': '20250102-0002',
-                    'orgao_codigo': '26297',
-                    'orgao_nome': 'Secretaria de Educação',
-                    'uasg': '150001',
-                    'objeto': 'Material de escritório',
-                    'cidade': 'Recife',
-                    'uf': 'PE',
-                    'data_inicio_propostas': '2025-01-02',
-                    'data_fim_propostas': '2025-01-05',
-                    'data_homologacao': '2025-01-06',
-                    'fornecedor': 'Comércio ABC LTDA',
-                    'cnpj_fornecedor': '23.456.789/0001-01',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Papel A4 (resma)',
-                            'quantidade': 50,
-                            'valor_unitario': 25.00,
-                            'valor_total_item': 1250.00
-                        },
-                        {
-                            'numero_item': '002',
-                            'descricao': 'Canetas azuis',
-                            'quantidade': 500,
-                            'valor_unitario': 0.50,
-                            'valor_total_item': 250.00
-                        }
+                    "id_licitacao": "08778201000126",
+                    "numero_pregao": "20250101-0001",
+                    "orgao_nome": "Universidade Federal de Pernambuco",
+                    "orgao_codigo": "26296",
+                    "uasg": "150000",
+                    "cidade": "Recife",
+                    "uf": "PE",
+                    "objeto": "Fornecimento de medicamentos",
+                    "link_edital": "https://pncp.gov.br/app/editais/26296/2025/1",
+                    "data_resultado": "2025-01-05T00:00:00",
+                    "data_inicio_propostas": "2025-01-01",
+                    "data_fim_propostas": "2025-01-03",
+                    "id_pncp": "08778201000126",
+                    "cnpj_fornecedor": "12.345.678/0001-90",
+                    "tipo": "eletronico",
+                    "itens": [
+                        {"numero_item": "001", "descricao": "Paracetamol 500mg", "quantidade": 100, "valor_unitario": 1.50, "valor_total": 150.00}
                     ]
                 },
                 {
-                    'id_pncp': '08778201000128',
-                    'numero_pregao': '20250103-0003',
-                    'orgao_codigo': '26298',
-                    'orgao_nome': 'Prefeitura Municipal de Olinda',
-                    'uasg': '150002',
-                    'objeto': 'Serviços de limpeza',
-                    'cidade': 'Olinda',
-                    'uf': 'PE',
-                    'data_inicio_propostas': '2025-01-03',
-                    'data_fim_propostas': '2025-01-07',
-                    'data_homologacao': '2025-01-08',
-                    'fornecedor': 'Limpeza Brasil SP',
-                    'cnpj_fornecedor': '34.567.890/0001-12',
-                    'itens': [
-                        {
-                            'numero_item': '001',
-                            'descricao': 'Serviço de limpeza predial',
-                            'quantidade': 1,
-                            'valor_unitario': 5000.00,
-                            'valor_total_item': 5000.00
-                        }
+                    "id_licitacao": "08778201000127",
+                    "numero_pregao": "20250102-0002",
+                    "orgao_nome": "Secretaria de Educação",
+                    "orgao_codigo": "26297",
+                    "uasg": "150001",
+                    "cidade": "Recife",
+                    "uf": "PE",
+                    "objeto": "Material de escritório",
+                    "link_edital": "https://pncp.gov.br/app/editais/26297/2025/2",
+                    "data_resultado": "2025-01-06T00:00:00",
+                    "data_inicio_propostas": "2025-01-02",
+                    "data_fim_propostas": "2025-01-05",
+                    "id_pncp": "08778201000127",
+                    "cnpj_fornecedor": "23.456.789/0001-01",
+                    "tipo": "presencial",
+                    "itens": [
+                        {"numero_item": "001", "descricao": "Papel A4 (resma)", "quantidade": 50, "valor_unitario": 25.00, "valor_total": 1250.00},
+                        {"numero_item": "002", "descricao": "Canetas azuis", "quantidade": 500, "valor_unitario": 0.50, "valor_total": 250.00}
                     ]
                 }
             ];
         }
 
-        // Carregar dados da API
-        async function carregarDadosAPI() {
-            try {
-                console.log('📡 Conectando à API:', CONFIG.API_URL);
-                
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
-
-                const response = await fetch(CONFIG.API_URL, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeout);
-
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const dados = await response.json();
-                
-                if (!Array.isArray(dados)) {
-                    throw new Error('API retornou formato inválido (não é array)');
-                }
-
-                console.log('✅ Dados carregados com sucesso:', dados.length, 'registros');
-                exibirAlerta('info', 'Sucesso', `${dados.length} licitações carregadas da API`);
-                
-                return dados;
-
-            } catch (erro) {
-                console.error('❌ Erro ao carregar API:', erro);
-                
-                tentativaAtual++;
-                if (tentativaAtual < CONFIG.RETRIES) {
-                    console.log(`🔄 Tentativa ${tentativaAtual}/${CONFIG.RETRIES}...`);
-                    exibirAlerta('warning', 'Aviso', `Tentativa ${tentativaAtual}/${CONFIG.RETRIES} de reconexão...`);
-                    
-                    // Aguardar 2 segundos antes de tentar novamente
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    return carregarDadosAPI();
-                } else {
-                    console.error('❌ Todas as tentativas falharam');
-                    exibirAlerta('danger', 'Erro de Conexão', 
-                        'Não foi possível conectar à API. Usando dados de demonstração.');
-                    return null;
-                }
-            }
-        }
-
-        // Função principal de carregamento
-        async function carregarDados() {
-            mostrarLoading(true);
-            tentativaAtual = 0;
-
-            try {
-                let dados = null;
-
-                if (CONFIG.USE_MOCK_DATA) {
-                    console.log('📊 Usando dados de teste (MOCK)');
-                    exibirAlerta('info', 'Modo Teste', 'Usando dados de demonstração. Configure CONFIG.API_URL para usar dados reais.');
-                    dados = obterDadosMock();
-                } else {
-                    console.log('🌐 Tentando carregar da API...');
-                    dados = await carregarDadosAPI();
-                    
-                    if (!dados) {
-                        console.log('⚠️ API falhou, usando dados de teste');
-                        dados = obterDadosMock();
-                    }
-                }
-
-                // Processar dados
-                if (dados && dados.length > 0) {
-                    dadosOriginais = [...dados];
-                    preencherFiltros(dados);
-                    atualizarTabela(dados);
-                    console.log('✅ Dashboard carregado com', dados.length, 'registros');
-                } else {
-                    exibirAlerta('danger', 'Erro', 'Nenhum dado foi carregado');
-                    atualizarCards(0, 0, 0, 0);
-                }
-
-            } catch (erro) {
-                console.error('❌ Erro crítico:', erro);
-                exibirAlerta('danger', 'Erro Crítico', erro.message);
-                atualizarCards(0, 0, 0, 0);
-            } finally {
-                mostrarLoading(false);
-            }
-        }
-
-        // ==================== PREENCHIMENTO DE FILTROS ====================
-
-        function preencherFiltros(data) {
-            const orgaos = new Set();
-            const ufs = new Set();
-            const uasgs = new Set();
-            const fornecedores = new Set();
-
-            data.forEach(lic => {
-                if (lic.orgao_nome) orgaos.add(lic.orgao_nome);
-                if (lic.uf) ufs.add(lic.uf);
-                if (lic.uasg) uasgs.add(lic.uasg);
-                if (lic.fornecedor) fornecedores.add(lic.fornecedor);
-            });
-
-            // Preencher Órgãos
-            const selectOrgao = document.getElementById('filtro-orgao');
-            selectOrgao.innerHTML = '<option value="">Todos os Órgãos</option>';
-            Array.from(orgaos).sort().forEach(orgao => {
-                const option = document.createElement('option');
-                option.value = orgao;
-                option.textContent = orgao;
-                selectOrgao.appendChild(option);
-            });
-
-            // Preencher UFs
-            const selectUf = document.getElementById('filtro-uf');
-            selectUf.innerHTML = '<option value="">Todos os Estados</option>';
-            Array.from(ufs).sort().forEach(uf => {
-                const option = document.createElement('option');
-                option.value = uf;
-                option.textContent = uf;
-                selectUf.appendChild(option);
-            });
-
-            // Preencher UASGs
-            const selectUasg = document.getElementById('filtro-uasg');
-            selectUasg.innerHTML = '<option value="">Todos os UASG</option>';
-            Array.from(uasgs).sort().forEach(uasg => {
-                const option = document.createElement('option');
-                option.value = uasg;
-                option.textContent = uasg;
-                selectUasg.appendChild(option);
-            });
-
-            // Preencher Fornecedores
-            const selectFornecedor = document.getElementById('filtro-fornecedor');
-            selectFornecedor.innerHTML = '<option value="">Todos os Fornecedores</option>';
-            Array.from(fornecedores).sort().forEach(fornecedor => {
-                const option = document.createElement('option');
-                option.value = fornecedor;
-                option.textContent = fornecedor;
-                selectFornecedor.appendChild(option);
-            });
-        }
-
-        // ==================== APLICAÇÃO DE FILTROS ====================
-
-        function aplicarFiltros() {
-            const filtroOrgao = document.getElementById('filtro-orgao').value;
-            const filtroUf = document.getElementById('filtro-uf').value;
-            const filtroUasg = document.getElementById('filtro-uasg').value;
-            const filtroFornecedor = document.getElementById('filtro-fornecedor').value;
-            const filtroPregao = document.getElementById('filtro-pregao').value.toLowerCase();
-
-            const dadosFiltrados = dadosOriginais.filter(lic => {
-                const matchOrgao = !filtroOrgao || lic.orgao_nome === filtroOrgao;
-                const matchUf = !filtroUf || lic.uf === filtroUf;
-                const matchUasg = !filtroUasg || lic.uasg === filtroUasg;
-                const matchFornecedor = !filtroFornecedor || lic.fornecedor === filtroFornecedor;
-                const matchPregao = !filtroPregao || 
-                    (lic.numero_pregao && lic.numero_pregao.toLowerCase().includes(filtroPregao)) ||
-                    (lic.id_pncp && lic.id_pncp.toLowerCase().includes(filtroPregao));
-
-                return matchOrgao && matchUf && matchUasg && matchFornecedor && matchPregao;
-            });
-
-            atualizarTabela(dadosFiltrados);
-        }
-
-        function limparFiltros() {
-            document.getElementById('filtro-orgao').value = '';
-            document.getElementById('filtro-uf').value = '';
-            document.getElementById('filtro-uasg').value = '';
-            document.getElementById('filtro-fornecedor').value = '';
-            document.getElementById('filtro-pregao').value = '';
-            atualizarTabela(dadosOriginais);
-        }
-
-        // ==================== ATUALIZAÇÃO DA TABELA ====================
-
-        function atualizarTabela(dados) {
-            let totalValor = 0;
+        function atualizarDashboard(dados) {
+            let totalVal = 0;
             let totalItens = 0;
-            const municipios = new Set();
-
-            const corpo = document.getElementById('corpo-tabela');
-            corpo.innerHTML = '';
-
-            if (dados.length === 0) {
-                corpo.innerHTML = `
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-message">
-                                <i class="fas fa-search"></i>
-                                <p>Nenhuma licitação encontrada com esses filtros</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                
-                atualizarCards(0, 0, 0, 0);
-                
-                if (dataTable) {
-                    dataTable.destroy();
-                }
-                dataTable = $('#tabela-licitacoes').DataTable({
-                    language: {
-                        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
-                    }
-                });
-                return;
-            }
+            let totalMun = new Set();
 
             dados.forEach(lic => {
-                municipios.add((lic.cidade || 'N/D') + '/' + (lic.uf || 'N/D'));
-
-                const fornecedor = lic.fornecedor || 'N/D';
-
-                if (lic.itens && lic.itens.length > 0) {
-                    lic.itens.forEach(it => {
-                        const valor = parseFloat(it.valor_total_item || 0);
-                        totalValor += valor;
-                        totalItens++;
-                    });
-                }
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <small>${formatarData(lic.data_homologacao)}</small>
-                    </td>
-                    <td>
-                        <strong>${lic.orgao_nome || 'N/D'}</strong><br>
-                        <small class="text-muted">${lic.cidade || 'N/D'}, ${lic.uf || 'N/D'}</small>
-                    </td>
-                    <td>
-                        <code>${lic.id_pncp || lic.numero_pregao || 'N/D'}</code>
-                    </td>
-                    <td>${formatarData(lic.data_inicio_propostas)}</td>
-                    <td>${formatarData(lic.data_fim_propostas)}</td>
-                    <td>
-                        <span class="badge bg-success">${fornecedor}</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary detalhes-btn" 
-                                onclick="abrirDetalhes('${lic.id_pncp}')">
-                            <i class="fas fa-eye"></i> Detalhes
-                        </button>
-                    </td>
-                `;
-                row.dataset.licData = JSON.stringify(lic);
-                corpo.appendChild(row);
+                totalMun.add(lic.cidade);
+                lic.itens.forEach(item => {
+                    totalVal += item.valor_total;
+                    totalItens++;
+                });
             });
 
-            atualizarCards(dados.length, totalValor, totalItens, municipios.size);
-
-            if (dataTable) {
-                dataTable.destroy();
-            }
-            dataTable = $('#tabela-licitacoes').DataTable({
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
-                },
-                order: [[0, 'desc']],
-                pageLength: 10,
-                responsive: true
-            });
-        }
-
-        function atualizarCards(totalLic, totalVal, totalIt, totalMun) {
-            document.getElementById('total-lic').innerText = totalLic.toLocaleString('pt-BR');
-            document.getElementById('total-val').innerText = formatarMoeda(totalVal);
-            document.getElementById('total-itens').innerText = totalIt.toLocaleString('pt-BR');
-            document.getElementById('total-mun').innerText = totalMun;
-        }
-
-        // ==================== MODAL DE DETALHES ====================
-
-        function abrirDetalhes(idPncp) {
-            const licData = dadosOriginais.find(lic => lic.id_pncp === idPncp);
+            document.getElementById('total-valor').innerText = formatMoney(totalVal);
+            document.getElementById('count-pregoes').innerText = dados.length;
+            document.getElementById('count-itens').innerText = totalItens;
+            document.getElementById('count-municipios').innerText = totalMun.size;
             
-            if (!licData) {
-                alert('Licitação não encontrada');
+            const agora = new Date();
+            document.getElementById('last-update').innerText = 'Atualizado: ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString();
+        }
+
+        function renderizarLista(dados) {
+            const container = document.getElementById('container-licitacoes');
+            container.innerHTML = '';
+
+            if (dados.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-search fa-3x mb-3 opacity-50"></i><h5>Nenhum pregão encontrado</h5></div>';
                 return;
             }
 
-            let tabelaItensHtml = '';
-            if (licData.itens && licData.itens.length > 0) {
-                tabelaItensHtml = `
-                    <h6 class="mt-4 mb-3">
-                        <i class="fas fa-list"></i> Itens da Licitação
-                    </h6>
-                    <table class="table table-modal table-sm">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Descrição</th>
-                                <th>Qtd</th>
-                                <th>Valor Unit.</th>
-                                <th>Valor Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${licData.itens.map(item => `
-                                <tr>
-                                    <td>${item.numero_item || '-'}</td>
-                                    <td>${item.descricao || '-'}</td>
-                                    <td>${item.quantidade || 0}</td>
-                                    <td>${formatarMoeda(item.valor_unitario)}</td>
-                                    <td><strong>${formatarMoeda(item.valor_total_item)}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+            dados.forEach((lic, index) => {
+                const totalLic = lic.itens.reduce((acc, it) => acc + (it.valor_total || 0), 0);
+                const classeCard = lic.tipo === 'eletronico' ? 'pregao-eletronico' : '';
+                
+                const card = document.createElement('div');
+                card.className = `card-licitacao p-4 ${classeCard}`;
+                
+                card.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-1 text-center">
+                            <div class="bg-light rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-gavel text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="num-pregao-destaque mb-1">${lic.numero_pregao}</div>
+                            <h6 class="mb-1 text-dark fw-bold">${lic.orgao_nome}</h6>
+                            <div class="text-muted small">
+                                <i class="fas fa-map-marker-alt me-1"></i> ${lic.cidade} - ${lic.uf}
+                                <span class="badge badge-uasg">UASG: ${lic.uasg}</span>
+                                ${lic.tipo === 'eletronico' ? '<span class="status-badge status-eletronico ms-2"><i class="fas fa-laptop"></i> Eletrônico</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <div class="text-muted small text-uppercase">Valor Total</div>
+                            <div class="valor-total">${formatMoney(totalLic)}</div>
+                            <div class="small text-muted">${lic.itens.length} item(s)</div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <a href="${lic.link_edital || '#'}" target="_blank" class="btn btn-outline-primary btn-sm me-2 mb-1">
+                                <i class="fas fa-external-link-alt"></i> Edital
+                            </a>
+                            <button class="btn btn-primary btn-sm btn-expandir mb-1" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${index}">
+                                Ver Detalhes <i class="fas fa-chevron-down ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="collapse mt-3" id="collapse-${index}">
+                        <div class="info-prazos">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <span class="info-label"><i class="fas fa-calendar-check me-1"></i> Data Resultado</span>
+                                    <span class="info-value">${formatDate(lic.data_resultado)}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="info-label"><i class="far fa-calendar me-1"></i> Início Propostas</span>
+                                    <span class="info-value">${formatDate(lic.data_inicio_propostas)}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="info-label"><i class="far fa-calendar-times me-1"></i> Fim Propostas</span>
+                                    <span class="info-value">${formatDate(lic.data_fim_propostas)}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="info-label"><i class="fas fa-fingerprint me-1"></i> ID PNCP</span>
+                                    <span class="id-pncp">${lic.id_pncp || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <span class="info-label">Objeto</span>
+                                    <span class="info-value text-truncate d-block" style="max-width: 100%;">${lic.objeto}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <span class="info-label">Fornecedor</span>
+                                    <span class="info-value">${lic.cnpj_fornecedor} - ${lic.orgao_nome}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${lic.itens && lic.itens.length > 0 ? `
+                        <div class="table-responsive">
+                            <table class="table table-itens table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th class="text-center">Qtd</th>
+                                        <th class="text-end">Unit.</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${lic.itens.map(item => `
+                                        <tr>
+                                            <td class="fw-bold text-center bg-light">${item.numero_item}</td>
+                                            <td class="text-truncate" style="max-width: 300px;" title="${item.descricao}">${item.descricao}</td>
+                                            <td class="text-center">${item.quantidade || 0}</td>
+                                            <td class="text-end">${formatMoney(item.valor_unitario)}</td>
+                                            <td class="text-end fw-bold text-success">${formatMoney(item.valor_total)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : '<div class="text-muted text-center py-3">Itens não disponíveis</div>'}
+                    </div>
                 `;
-            }
-
-            const html = `
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">ID PNCP</span>
-                        <span class="detail-value">${licData.id_pncp || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Nº Pregão</span>
-                        <span class="detail-value">${licData.numero_pregao || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">Órgão</span>
-                        <span class="detail-value">${licData.orgao_nome || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Cidade</span>
-                        <span class="detail-value">${licData.cidade || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Estado</span>
-                        <span class="detail-value">${licData.uf || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">UASG</span>
-                        <span class="detail-value">${licData.uasg || 'N/D'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Código Órgão</span>
-                        <span class="detail-value">${licData.orgao_codigo || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">Objeto</span>
-                        <span class="detail-value">${licData.objeto || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Data Início</span>
-                        <span class="detail-value">${formatarData(licData.data_inicio_propostas)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Data Fim</span>
-                        <span class="detail-value">${formatarData(licData.data_fim_propostas)}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-item">
-                        <span class="detail-label">Data Homologação</span>
-                        <span class="detail-value">${formatarData(licData.data_homologacao)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Fornecedor Principal</span>
-                        <span class="detail-value">${licData.fornecedor || 'N/D'}</span>
-                    </div>
-                </div>
-
-                <div class="detail-row full">
-                    <div class="detail-item">
-                        <span class="detail-label">CNPJ Fornecedor</span>
-                        <span class="detail-value">${licData.cnpj_fornecedor || 'N/D'}</span>
-                    </div>
-                </div>
-
-                ${tabelaItensHtml}
-            `;
-
-            document.getElementById('modalBody').innerHTML = html;
-            const modal = new bootstrap.Modal(document.getElementById('detalhesModal'));
-            modal.show();
+                container.appendChild(card);
+            });
         }
 
-        // ==================== EVENT LISTENERS ====================
-
-        document.getElementById('btn-filtrar').addEventListener('click', aplicarFiltros);
-        document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
-
-        document.getElementById('filtro-pregao').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') aplicarFiltros();
+        // Busca em tempo real (prioriza Nº Pregão)
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            const termo = e.target.value.toLowerCase().trim();
+            const dadosFiltrados = dadosGlobais.filter(lic => 
+                (lic.numero_pregao && lic.numero_pregao.toLowerCase().includes(termo)) ||
+                lic.orgao_nome.toLowerCase().includes(termo) ||
+                lic.cidade.toLowerCase().includes(termo) ||
+                lic.uf.toLowerCase().includes(termo) ||
+                (lic.uasg && lic.uasg.includes(termo)) ||
+                (lic.id_pncp && lic.id_pncp.toLowerCase().includes(termo))
+            );
+            renderizarLista(dadosFiltrados);
         });
 
-        // ==================== INICIALIZAÇÃO ====================
+        // Auto-refresh a cada 10 minutos
+        setInterval(carregarDados, 600000);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Dashboard iniciando...');
-            console.log('Configuração:', CONFIG);
-            carregarDados();
-        });
+        // Inicializar
+        carregarDados();
     </script>
 </body>
 </html>
