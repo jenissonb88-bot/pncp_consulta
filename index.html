@@ -301,18 +301,21 @@
             </div>
         </div>
 
-        <!-- Tabela -->
+        <!-- Tabela com Paginação -->
         <div class="table-container">
-            <h4><i class="fas fa-table"></i> Licitações Públicas</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0;"><i class="fas fa-table"></i> Licitações Públicas</h4>
+                <small id="info-paginacao" style="color: #666;">Carregando...</small>
+            </div>
             
             <div class="table-responsive">
                 <table id="tabela-licitacoes" class="table">
                     <thead>
                         <tr>
-                            <th>Data Resultado</th>
+                            <th>Data</th>
                             <th>Órgão</th>
-                            <th>Nº Pregão</th>
-                            <th>Municipio</th>
+                            <th>Pregão</th>
+                            <th>Município</th>
                             <th>Fornecedor</th>
                             <th>Valor</th>
                         </tr>
@@ -321,11 +324,20 @@
                         <tr>
                             <td colspan="6" class="text-center text-muted py-4">
                                 <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
-                                Carregando dados de dados_pncp.json...
+                                Carregando...
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Controle de Paginação -->
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; align-items: center;">
+                <button id="btn-anterior" class="btn btn-secondary btn-sm" style="padding: 6px 12px;">← Anterior</button>
+                <span id="pagina-info" style="font-weight: 600; color: #333; min-width: 100px; text-align: center;">Página 1</span>
+                <button id="btn-proximo" class="btn btn-secondary btn-sm" style="padding: 6px 12px;">Próximo →</button>
+                <input type="number" id="input-pagina" class="form-control" style="width: 80px; padding: 6px;" placeholder="Ir para" min="1">
+                <button id="btn-ir-pagina" class="btn btn-primary btn-sm" style="padding: 6px 12px;">Ir</button>
             </div>
         </div>
     </div>
@@ -337,12 +349,15 @@
     <script>
         // ==================== CONFIGURAÇÃO ====================
         const CONFIG = {
-            DADOS_LOCAL: 'dados_pncp.json',  // ✅ USANDO dados_pncp.json
+            DADOS_LOCAL: 'dados_pncp.json',
             TIMEOUT: 10000,
-            AUTO_REFRESH: 60000
+            ITENS_POR_PAGINA: 20,  // ✅ Paginação - reduz renderização
+            AUTO_REFRESH: 300000   // ✅ Auto-refresh a cada 5 minutos (em vez de 1)
         };
 
         let dadosOriginais = [];
+        let paginaAtual = 1;
+        let dadosFiltrados = [];
 
         // ==================== FUNÇÕES UTILITÁRIAS ====================
 
@@ -431,26 +446,41 @@
             }
         }
 
-        // ==================== ATUALIZAR TABELA ====================
+        // ==================== ATUALIZAR TABELA COM PAGINAÇÃO ====================
 
-        function atualizarTabela(dados) {
+        function atualizarTabela(dados, pagina = 1) {
             const tbody = document.getElementById('corpo-tabela');
             
             if (!dados || dados.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Sem dados para exibir</td></tr>';
+                document.getElementById('info-paginacao').textContent = 'Nenhum registro';
                 return;
             }
 
-            tbody.innerHTML = dados.map(lic => `
+            dadosFiltrados = dados;
+            paginaAtual = pagina;
+
+            const inicio = (pagina - 1) * CONFIG.ITENS_POR_PAGINA;
+            const fim = inicio + CONFIG.ITENS_POR_PAGINA;
+            const dadosPagina = dados.slice(inicio, fim);
+            const totalPaginas = Math.ceil(dados.length / CONFIG.ITENS_POR_PAGINA);
+
+            tbody.innerHTML = dadosPagina.map(lic => `
                 <tr>
                     <td>${formatarData(lic.DataResult)}</td>
-                    <td>${lic.Orgao || 'N/D'}</td>
+                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${lic.Orgao || 'N/D'}</td>
                     <td>${lic.NumEdital || 'N/D'}</td>
                     <td>${lic.Municipio || 'N/D'}</td>
-                    <td>${lic.Fornecedor || 'N/D'}</td>
+                    <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis;">${lic.Fornecedor || 'N/D'}</td>
                     <td>${formatarMoeda(lic.ValorTotal || 0)}</td>
                 </tr>
             `).join('');
+
+            document.getElementById('pagina-info').textContent = `Página ${pagina} de ${totalPaginas}`;
+            document.getElementById('info-paginacao').textContent = `${dados.length} registros | ${totalPaginas} página(s)`;
+            document.getElementById('btn-anterior').disabled = pagina === 1;
+            document.getElementById('btn-proximo').disabled = pagina === totalPaginas;
+            document.getElementById('input-pagina').max = totalPaginas;
         }
 
         // ==================== ATUALIZAR CARDS ====================
@@ -475,10 +505,32 @@
             document.getElementById('total-mun').textContent = municipios.size;
         }
 
+        // ==================== CONTROLE DE PAGINAÇÃO ====================
+
+        document.getElementById('btn-anterior').addEventListener('click', () => {
+            if (paginaAtual > 1) atualizarTabela(dadosFiltrados, paginaAtual - 1);
+        });
+
+        document.getElementById('btn-proximo').addEventListener('click', () => {
+            const totalPaginas = Math.ceil(dadosFiltrados.length / CONFIG.ITENS_POR_PAGINA);
+            if (paginaAtual < totalPaginas) atualizarTabela(dadosFiltrados, paginaAtual + 1);
+        });
+
+        document.getElementById('btn-ir-pagina').addEventListener('click', () => {
+            const pagina = parseInt(document.getElementById('input-pagina').value);
+            const totalPaginas = Math.ceil(dadosFiltrados.length / CONFIG.ITENS_POR_PAGINA);
+            if (pagina > 0 && pagina <= totalPaginas) {
+                atualizarTabela(dadosFiltrados, pagina);
+                document.getElementById('input-pagina').value = '';
+            } else {
+                alert('Número de página inválido!');
+            }
+        });
+
         // ==================== INICIAR ====================
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Dashboard iniciando...');
+            console.log('🚀 Dashboard PNCP Otimizado iniciando...');
             carregarDados();
         });
     </script>
