@@ -3,536 +3,1525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel PNCP Sniper 2026 - Licitações e Pregões</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Dashboard PNCP - Licitações Públicas</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --primary: #667eea;
-            --success: #28a745;
-            --info: #17a2b8;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
         }
-        
-        .header-bg { 
-            background: var(--primary-gradient); 
-            color: white; 
-            padding: 2.5rem 0; 
-            margin-bottom: 2rem; 
-            box-shadow: 0 10px 30px rgba(102,126,234,0.3);
+
+        .container-custom {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
         }
-        
-        .card-licitacao { 
-            border: none; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-            margin-bottom: 1.5rem; 
-            transition: all 0.3s ease; 
+
+        /* Header */
+        .header {
             background: white;
-            overflow: hidden;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
         }
-        
-        .card-licitacao:hover { 
-            transform: translateY(-8px); 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
+
+        .header h1 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
-        
-        .num-pregao-destaque { 
-            font-size: 1.4rem; 
-            font-weight: 800; 
-            background: var(--primary-gradient); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            background-clip: text;
-            margin-bottom: 0.5rem;
+
+        .header h1 i {
+            color: #667eea;
         }
-        
-        .orgao-nome { 
-            color: #1a202c; 
-            font-weight: 600; 
-            font-size: 1.1rem; 
-            margin-bottom: 0.25rem;
+
+        .header p {
+            color: #666;
+            margin: 0;
+            font-size: 0.95rem;
         }
-        
-        .fornecedor-nome { 
-            color: var(--success); 
-            font-weight: 600; 
-            font-size: 1rem;
-            background: rgba(40,167,69,0.1);
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            display: inline-block;
+
+        /* Alert */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 15px 20px;
+            margin-bottom: 20px;
         }
-        
-        .valor-total { 
-            font-size: 1.3rem; 
-            font-weight: 700; 
-            color: var(--success); 
-            margin-bottom: 0.25rem;
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
         }
-        
-        .info-prazos { 
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); 
-            border-radius: 12px; 
-            padding: 1.25rem; 
-            margin-bottom: 1.25rem; 
-            border-left: 5px solid var(--primary);
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
         }
-        
-        .info-label { 
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            color: #64748b; 
-            font-weight: 600; 
-            letter-spacing: 0.5px;
-            display: block; 
-            margin-bottom: 0.25rem;
-        }
-        
-        .info-value { 
-            font-size: 0.95rem; 
-            font-weight: 600; 
-            color: #1e293b;
-        }
-        
-        .id-pncp { 
-            font-family: 'Courier New', monospace; 
-            background: #f1f5f9; 
-            color: #475569; 
-            padding: 0.5rem 0.75rem; 
-            border-radius: 8px; 
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-        
-        .status-badge { 
-            font-size: 0.8rem; 
-            padding: 0.4em 0.8em; 
-            border-radius: 20px; 
-            font-weight: 600;
-        }
-        
-        .status-eletronico { 
-            background: rgba(13,202,240,0.2); 
+
+        .alert-info {
+            background: #d1ecf1;
             color: #0c5460;
         }
-        
-        .table-itens { 
-            margin: 0; 
-            font-size: 0.9rem;
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
         }
-        
-        .table-itens th { 
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-            border: none; 
-            font-weight: 600; 
-            color: #64748b;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-            padding: 1rem 0.75rem;
+
+        /* Cards de Estatísticas */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
-        
-        .table-itens td { 
-            border-color: #f1f5f9;
-            padding: 0.875rem 0.75rem;
-            vertical-align: middle;
-        }
-        
-        .btn-expandir { 
-            border-radius: 25px; 
-            font-weight: 500; 
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            padding: 0.5rem 1.25rem;
-        }
-        
-        .btn-expandir:hover { 
-            background: var(--primary); 
-            color: white;
-            transform: translateY(-1px);
-        }
-        
+
         .stat-card {
             background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            transition: transform 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-4px);
-        }
-        
-        #searchInput {
             border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-left: 5px solid #667eea;
         }
-        
-        #searchInput:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .stat-card.valor {
+            border-left-color: #28a745;
+        }
+
+        .stat-card.itens {
+            border-left-color: #ffc107;
+        }
+
+        .stat-card.municipios {
+            border-left-color: #17a2b8;
+        }
+
+        .stat-card.licitacoes {
+            border-left-color: #667eea;
+        }
+
+        .stat-card h3 {
+            color: #999;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-card .value {
+            color: #333;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .subtitle {
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        /* Seção de Filtros */
+        .filters-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .filters-section h4 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filters-section h4 i {
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-select,
+        .form-control {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: white;
+            color: #333;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-select:focus,
+        .form-control:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-outline-primary {
+            border: 2px solid #667eea;
+            color: #667eea;
+            background: white;
+        }
+
+        .btn-outline-primary:hover {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Tabela */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .table-container h4 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-container h4 i {
+            color: #667eea;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            color: #333;
+            font-weight: 700;
+            padding: 15px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge.bg-success {
+            background: #28a745 !important;
+        }
+
+        .badge.bg-info {
+            background: #17a2b8 !important;
+        }
+
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #667eea;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .text-muted {
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        /* Modal de Detalhes */
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-row.full {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-label {
+            color: #999;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .detail-value {
+            color: #333;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .table-modal {
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-modal thead {
+            background: #f8f9fa;
+        }
+
+        .table-modal thead th {
+            padding: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .table-modal tbody td {
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .table-modal tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Mensagem vazia */
+        .empty-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-message i {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .stats-cards {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .detail-row {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .table-container {
+                padding: 15px;
+            }
+
+            .table thead th,
+            .table tbody td {
+                padding: 10px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .api-config {
+            background: #e7f3ff;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .api-config strong {
+            color: #1976d2;
         }
     </style>
 </head>
 <body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
 
-    <div class="header-bg">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h1 class="fw-bold mb-1"><i class="fas fa-bullseye me-3"></i>PNCP Sniper 2026</h1>
-                    <p class="mb-0 opacity-90 fs-6">Monitoramento Inteligente de Pregões e Licitações Públicas</p>
+    <div class="container-custom">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-gavel"></i> Dashboard PNCP</h1>
+            <p>Análise de Licitações Públicas em Tempo Real</p>
+        </div>
+
+        <!-- Alertas e Status -->
+        <div id="alertas-container"></div>
+        
+        <div class="api-config">
+            <strong>🚀 DADOS REAIS DO PNCP (Drogafonte)</strong>
+            <div style="font-size: 0.85rem; margin-top: 8px;">
+                <div>✅ Fonte: <code>dados.json</code> (gerado por coleta_pncp.py)</div>
+                <div>📊 Atualização automática a cada <span id="refresh-time">1 minuto</span></div>
+                <div id="data-status" style="margin-top: 5px; color: #1976d2;">Carregando...</div>
+            </div>
+        </div>
+
+        <!-- Cards de Estatísticas -->
+        <div class="stats-cards">
+            <div class="stat-card licitacoes">
+                <h3><i class="fas fa-file-contract"></i> Licitações</h3>
+                <div class="value" id="total-lic">-</div>
+                <div class="subtitle">Total de processos</div>
+            </div>
+            <div class="stat-card valor">
+                <h3><i class="fas fa-money-bill-wave"></i> Valor Total</h3>
+                <div class="value" id="total-val">-</div>
+                <div class="subtitle">Valor agregado</div>
+            </div>
+            <div class="stat-card itens">
+                <h3><i class="fas fa-cubes"></i> Itens</h3>
+                <div class="value" id="total-itens">-</div>
+                <div class="subtitle">Total de itens</div>
+            </div>
+            <div class="stat-card municipios">
+                <h3><i class="fas fa-map-marker-alt"></i> Municípios</h3>
+                <div class="value" id="total-mun">-</div>
+                <div class="subtitle">Cidades atendidas</div>
+            </div>
+        </div>
+
+        <!-- Seção de Filtros -->
+        <div class="filters-section">
+            <h4><i class="fas fa-filter"></i> Filtros Avançados</h4>
+            
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label"><i class="fas fa-sitemap"></i> Órgão</label>
+                    <select id="filtro-orgao" class="form-select">
+                        <option value="">Todos os Órgãos</option>
+                    </select>
                 </div>
-                <div class="text-end">
-                    <span class="badge bg-white text-primary fs-5 px-3 py-2 shadow-sm" id="total-valor">R$ 0,00</span>
-                    <div class="mt-2 opacity-80" id="last-update">Carregando...</div>
+
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label"><i class="fas fa-map-pin"></i> Estado (UF)</label>
+                    <select id="filtro-uf" class="form-select">
+                        <option value="">Todos os Estados</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label"><i class="fas fa-building"></i> UASG</label>
+                    <select id="filtro-uasg" class="form-select">
+                        <option value="">Todos os UASG</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label"><i class="fas fa-gavel"></i> Tipo Pregão</label>
+                    <select id="filtro-tipo-pregao" class="form-select">
+                        <option value="">Todos os Tipos</option>
+                        <option value="eletronico">Eletrônico</option>
+                        <option value="presencial">Presencial</option>
+                        <option value="hibrido">Híbrido</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label"><i class="fas fa-industry"></i> Fornecedor</label>
+                    <select id="filtro-fornecedor" class="form-select">
+                        <option value="">Todos os Fornecedores</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label"><i class="fas fa-barcode"></i> Nº Pregão</label>
+                    <input type="text" id="filtro-pregao" class="form-control" 
+                           placeholder="Ex: 20250101-0001">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="btn-filtrar" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Aplicar Filtros
+                </button>
+                <button id="btn-limpar-filtros" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Limpar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-container">
+            <h4><i class="fas fa-table"></i> Licitações Públicas</h4>
+            
+            <div class="table-responsive">
+                <table id="tabela-licitacoes" class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Órgão / Localização</th>
+                            <th>Nº Pregão / ID PNCP</th>
+                            <th>Data Início</th>
+                            <th>Data Fim</th>
+                            <th>Fornecedor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-tabela">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
+                                Carregando dados...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Análise de Resultados por Item -->
+        <div class="table-container" style="margin-top: 30px;">
+            <h4><i class="fas fa-box"></i> Análise por Item - Top 10</h4>
+            <div class="table-responsive">
+                <table id="tabela-itens" class="table">
+                    <thead>
+                        <tr>
+                            <th>Descrição do Item</th>
+                            <th>Qtd Total</th>
+                            <th>Valor Total</th>
+                            <th>Valor Médio</th>
+                            <th>Fornecedores</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-itens">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                Sem dados para exibir
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Análise de Resultados por Fornecedor -->
+        <div class="table-container" style="margin-top: 30px;">
+            <h4><i class="fas fa-store"></i> Ranking de Fornecedores - Top 10</h4>
+            <div class="table-responsive">
+                <table id="tabela-fornecedores" class="table">
+                    <thead>
+                        <tr>
+                            <th>Fornecedor</th>
+                            <th>CNPJ</th>
+                            <th>Itens Fornecidos</th>
+                            <th>Total de Licitações</th>
+                            <th>Valor Total</th>
+                            <th>Valor Médio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-fornecedores">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                Sem dados para exibir
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div class="modal fade" id="detalhesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-search-plus"></i> Detalhes da Licitação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Conteúdo dinâmico -->
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="container pb-5">
-        <div class="row g-4 mb-4">
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card h-100">
-                    <div class="text-muted small text-uppercase fw-bold mb-2">Pregões Monitorados</div>
-                    <div class="h2 mb-1 fw-bold text-primary" id="count-pregoes">0</div>
-                    <small class="text-muted">Total de processos</small>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card h-100">
-                    <div class="text-muted small text-uppercase fw-bold mb-2">Itens Licitados</div>
-                    <div class="h2 mb-1 fw-bold text-success" id="count-itens">0</div>
-                    <small class="text-muted">Produtos/Serviços</small>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card h-100">
-                    <div class="text-muted small text-uppercase fw-bold mb-2">Municípios</div>
-                    <div class="h2 mb-1 fw-bold text-info" id="count-municipios">0</div>
-                    <small class="text-muted">Cidades únicas</small>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card h-100 d-flex flex-column justify-content-center">
-                    <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔍 Nº Pregão, Órgão ou Cidade...">
-                </div>
-            </div>
-        </div>
-
-        <div id="loading" class="text-center py-5 d-none">
-            <div class="spinner-border text-primary fs-1 mb-3" role="status"></div>
-            <p class="text-muted fs-5">Conectando com PNCP...</p>
-        </div>
-
-        <div id="container-licitacoes"></div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
-        const formatMoney = (value) => {
-            return parseFloat(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        // ==================== CONFIGURAÇÃO DA API ====================
+        const CONFIG = {
+            // ✅ DADOS REAIS - Arquivo gerado por coleta_pncp.py
+            DADOS_LOCAL: 'dados.json', // Arquivo local com dados PNCP reais
+            USE_MOCK_DATA: false, // false = carrega dados reais | true = usa demo
+            TIMEOUT: 10000, // 10 segundos
+            RETRIES: 3,
+            AUTO_REFRESH: 60000 // Atualiza a cada 1 minuto
         };
 
-        const formatDate = (dateStr) => {
-            if (!dateStr) return '<span class="text-muted small">N/D</span>';
-            try {
-                const date = new Date(dateStr);
-                if (isNaN(date)) return dateStr;
-                return date.toLocaleDateString('pt-BR') + '<br><small class="opacity-75">' + 
-                       date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) + '</small>';
-            } catch {
-                return dateStr;
-            }
-        };
+        let dataTable = null;
+        let dadosOriginais = [];
+        let tentativaAtual = 0;
 
-        let dadosGlobais = [];
-        let todosFornecedores = {}; // Cache de nomes de fornecedores
+        // ==================== FUNÇÕES DE DADOS ====================
 
-        async function carregarDados() {
-            document.getElementById('loading').classList.remove('d-none');
-            
-            try {
-                // Tenta API PNCP real
-                const response = await fetch('https://api.pncp.gov.br/v1/licitacoes?_limit=100', {
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                let dados = [];
-                if (response.ok) {
-                    dados = await response.json();
-                    // Processa resumo_fornecedores para nomes reais
-                    dados.forEach(lic => {
-                        if (lic.resumo_fornecedores) {
-                            Object.entries(lic.resumo_fornecedores).forEach(([cnpj, info]) => {
-                                if (!todosFornecedores[cnpj]) {
-                                    todosFornecedores[cnpj] = info.fornecedor_nome || `Fornecedor ${cnpj.slice(-6)}`;
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    dados = obterDadosMock();
-                }
-
-                dadosGlobais = dados.filter(d => d.numero_pregao); // Só com pregão
-                dadosGlobais.sort((a, b) => new Date(b.data_resultado || b.data_homologacao || 0) - new Date(a.data_resultado || a.data_homologacao || 0));
-
-                atualizarDashboard(dadosGlobais);
-                renderizarLista(dadosGlobais);
-                
-            } catch (error) {
-                console.error('Erro API:', error);
-                dadosGlobais = obterDadosMock();
-                atualizarDashboard(dadosGlobais);
-                renderizarLista(dadosGlobais);
-            } finally {
-                document.getElementById('loading').classList.add('d-none');
+        function mostrarLoading(mostrar = true) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (mostrar) {
+                overlay.classList.add('show');
+            } else {
+                overlay.classList.remove('show');
             }
         }
 
+        function exibirAlerta(tipo, titulo, mensagem) {
+            const container = document.getElementById('alertas-container');
+            const alertId = 'alert-' + Date.now();
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+                    <strong>${titulo}:</strong> ${mensagem}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-remover em 5 segundos
+            setTimeout(() => {
+                const elem = document.getElementById(alertId);
+                if (elem) elem.remove();
+            }, 5000);
+        }
+
+        function formatarData(data) {
+            if (!data) return 'N/D';
+            try {
+                const d = new Date(data);
+                return d.toLocaleDateString('pt-BR');
+            } catch {
+                return data;
+            }
+        }
+
+        function formatarMoeda(valor) {
+            if (!valor) return 'R$ 0,00';
+            return parseFloat(valor).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+
+        // ==================== CARREGAMENTO DOS DADOS ====================
+
+        // Carrega dados REAIS do arquivo dados.json
+        async function carregarDadosLocal() {
+            try {
+                console.log('📁 Carregando dados locais: ' + CONFIG.DADOS_LOCAL);
+                const response = await fetch(CONFIG.DADOS_LOCAL + '?t=' + Date.now(), {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    console.warn('⚠️ Arquivo dados.json não encontrado. Execute coleta_pncp.py primeiro!');
+                    return null;
+                }
+                
+                const dados = await response.json();
+                console.log('✅ ' + dados.length + ' registros carregados de dados.json');
+                exibirAlerta('success', 'Dados Reais', 'Carregados ' + dados.length + ' registros da Drogafonte via PNCP');
+                
+                // Normalizar estrutura para o dashboard
+                return dados.map(lic => ({
+                    id_pncp: lic.IdPNCP || lic.Licitacao || '',
+                    numero_pregao: lic.NumEdital || lic.Edital || '',
+                    orgao_codigo: lic.UASG || '',
+                    orgao_nome: lic.Orgao || 'N/D',
+                    uasg: lic.UASG || '',
+                    objeto: 'Fornecimento de produtos/serviços',
+                    cidade: lic.Municipio || 'N/D',
+                    uf: lic.UF || 'N/D',
+                    link_edital: lic.Link || '#',
+                    data_resultado: lic.DataResult,
+                    data_inicio_propostas: lic.DtInicioPropostas,
+                    data_fim_propostas: lic.DtFimPropostas,
+                    fornecedor: lic.Fornecedor || 'Drogafonte',
+                    cnpj_fornecedor: lic.CNPJ || '08778201000126',
+                    tipo_pregao: 'eletronico',
+                    itens: (lic.Itens || []).map(item => ({
+                        numero_item: item.Item || '',
+                        descricao: item.Desc || '',
+                        quantidade: item.Qtd || 0,
+                        valor_unitario: item.Unitario || 0,
+                        valor_total_item: item.Total || 0
+                    }))
+                }));
+            } catch (erro) {
+                console.error('❌ Erro ao carregar dados.json:', erro);
+                return null;
+            }
+        }
+
+        // Dados de teste (mock)
         function obterDadosMock() {
             return [
                 {
-                    id_licitacao: "08084014000142000572024",
-                    numero_pregao: "25/2024",
-                    orgao_nome: "MUNICÍPIO DE CAMPO GRANDE",
-                    orgao_codigo: "08084014000142",
-                    uasg: "08084014000142",
-                    cidade: "Campo Grande",
-                    uf: "RN",
-                    objeto: "AQUISIÇÃO DE MATERIAIS PERMANENTE DESTINADOS AO DESENVOLVIMENTO DO ENSINO FUNDAMENTAL",
-                    link_edital: "https://pncp.gov.br/app/editais/08084014000142/2024/57",
-                    data_resultado: "2025-01-02T04:11:23",
-                    cnpj_fornecedor: "08778201000126",
-                    fornecedor_nome: "EDUCAMAZONAS COMÉRCIO E SERVIÇOS LTDA",
-                    tipo: "eletronico",
-                    itens: [
-                        {numero_item: "001", descricao: "Materiais permanentes educação", quantidade: 50, valor_unitario: 250.00, valor_total: 12500.00}
+                    'id_pncp': '08778201000126',
+                    'numero_pregao': '20250101-0001',
+                    'orgao_codigo': '26296',
+                    'orgao_nome': 'Universidade Federal de Pernambuco',
+                    'uasg': '150000',
+                    'objeto': 'Fornecimento de medicamentos',
+                    'cidade': 'Recife',
+                    'uf': 'PE',
+                    'tipo_pregao': 'eletronico',
+                    'data_inicio_propostas': '2025-01-01',
+                    'data_fim_propostas': '2025-01-03',
+                    'data_homologacao': '2025-01-05',
+                    'fornecedor': 'Farmacêutica XYZ',
+                    'cnpj_fornecedor': '12.345.678/0001-90',
+                    'itens': [
+                        {
+                            'numero_item': '001',
+                            'descricao': 'Paracetamol 500mg',
+                            'quantidade': 100,
+                            'valor_unitario': 1.50,
+                            'valor_total_item': 150.00
+                        }
                     ]
                 },
                 {
-                    id_licitacao: "08778201000126",
-                    numero_pregao: "20250101-0001",
-                    orgao_nome: "Universidade Federal de Pernambuco",
-                    orgao_codigo: "26296",
-                    uasg: "150000",
-                    cidade: "Recife",
-                    uf: "PE",
-                    objeto: "Fornecimento de medicamentos",
-                    link_edital: "https://pncp.gov.br/app/editais/26296/2025/1",
-                    data_resultado: "2025-01-05",
-                    cnpj_fornecedor: "12345678000190",
-                    fornecedor_nome: "FARMACÊUTICA XYZ LTDA",
-                    tipo: "eletronico",
-                    itens: [
-                        {numero_item: "001", descricao: "Paracetamol 500mg cx 20", quantidade: 100, valor_unitario: 1.50, valor_total: 150.00}
+                    'id_pncp': '08778201000127',
+                    'numero_pregao': '20250102-0002',
+                    'orgao_codigo': '26297',
+                    'orgao_nome': 'Secretaria de Educação',
+                    'uasg': '150001',
+                    'objeto': 'Material de escritório',
+                    'cidade': 'Recife',
+                    'uf': 'PE',
+                    'tipo_pregao': 'eletronico',
+                    'data_inicio_propostas': '2025-01-02',
+                    'data_fim_propostas': '2025-01-05',
+                    'data_homologacao': '2025-01-06',
+                    'fornecedor': 'Comércio ABC LTDA',
+                    'cnpj_fornecedor': '23.456.789/0001-01',
+                    'itens': [
+                        {
+                            'numero_item': '001',
+                            'descricao': 'Papel A4 (resma)',
+                            'quantidade': 50,
+                            'valor_unitario': 25.00,
+                            'valor_total_item': 1250.00
+                        },
+                        {
+                            'numero_item': '002',
+                            'descricao': 'Canetas azuis',
+                            'quantidade': 500,
+                            'valor_unitario': 0.50,
+                            'valor_total_item': 250.00
+                        }
                     ]
                 },
                 {
-                    id_licitacao: "08778201000127",
-                    numero_pregao: "20250102-0002",
-                    orgao_nome: "Secretaria de Educação de Pernambuco",
-                    orgao_codigo: "26297",
-                    uasg: "150001",
-                    cidade: "Recife",
-                    uf: "PE",
-                    objeto: "Aquisição de material de escritório",
-                    link_edital: "https://pncp.gov.br/app/editais/26297/2025/2",
-                    data_resultado: "2025-01-06",
-                    cnpj_fornecedor: "23456789000101",
-                    fornecedor_nome: "PAPELARIA ABC LTDA",
-                    tipo: "eletronico",
-                    itens: [
-                        {numero_item: "001", descricao: "Papel A4 Resma 75g", quantidade: 50, valor_unitario: 25.00, valor_total: 1250.00},
-                        {numero_item: "002", descricao: "Caneta esferográfica azul", quantidade: 500, valor_unitario: 0.50, valor_total: 250.00}
+                    'id_pncp': '08778201000128',
+                    'numero_pregao': '20250103-0003',
+                    'orgao_codigo': '26298',
+                    'orgao_nome': 'Prefeitura Municipal de Olinda',
+                    'uasg': '150002',
+                    'objeto': 'Serviços de limpeza',
+                    'cidade': 'Olinda',
+                    'uf': 'PE',
+                    'tipo_pregao': 'presencial',
+                    'data_inicio_propostas': '2025-01-03',
+                    'data_fim_propostas': '2025-01-07',
+                    'data_homologacao': '2025-01-08',
+                    'fornecedor': 'Limpeza Brasil SP',
+                    'cnpj_fornecedor': '34.567.890/0001-12',
+                    'itens': [
+                        {
+                            'numero_item': '001',
+                            'descricao': 'Serviço de limpeza predial',
+                            'quantidade': 1,
+                            'valor_unitario': 5000.00,
+                            'valor_total_item': 5000.00
+                        }
                     ]
                 }
             ];
         }
 
-        function atualizarDashboard(dados) {
-            let totalVal = 0, totalItens = 0, munSet = new Set();
-            
-            dados.forEach(lic => {
-                munSet.add(lic.cidade);
-                lic.itens?.forEach(item => {
-                    totalVal += item.valor_total || 0;
-                    totalItens++;
-                });
-            });
+        // Carregar dados da API PNCP Oficial
+        async function carregarDadosAPI() {
+            try {
+                console.log('🌐 Conectando à API PNCP Oficial');
+                
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
 
-            document.getElementById('total-valor').innerText = formatMoney(totalVal);
-            document.getElementById('count-pregoes').innerText = dados.length;
-            document.getElementById('count-itens').innerText = totalItens;
-            document.getElementById('count-municipios').innerText = munSet.size;
-            
-            const agora = new Date();
-            document.getElementById('last-update').innerText = 
-                'Atualizado: ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const dados = await response.json();
+                
+                if (!Array.isArray(dados)) {
+                    throw new Error('API retornou formato inválido (não é array)');
+                }
+
+                console.log('✅ Dados carregados com sucesso:', dados.length, 'registros');
+                exibirAlerta('info', 'Sucesso', `${dados.length} licitações carregadas da API`);
+                
+                return dados;
+
+            } catch (erro) {
+                console.error('❌ Erro ao carregar API:', erro);
+                
+                tentativaAtual++;
+                if (tentativaAtual < CONFIG.RETRIES) {
+                    console.log(`🔄 Tentativa ${tentativaAtual}/${CONFIG.RETRIES}...`);
+                    exibirAlerta('warning', 'Aviso', `Tentativa ${tentativaAtual}/${CONFIG.RETRIES} de reconexão...`);
+                    
+                    // Aguardar 2 segundos antes de tentar novamente
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return carregarDadosAPI();
+                } else {
+                    console.error('❌ Todas as tentativas falharam');
+                    exibirAlerta('danger', 'Erro de Conexão', 
+                        'Não foi possível conectar à API. Usando dados de demonstração.');
+                    return null;
+                }
+            }
         }
 
-        function renderizarLista(dados) {
-            const container = document.getElementById('container-licitacoes');
-            container.innerHTML = '';
+        // Função principal de carregamento
+        async function carregarDados() {
+            mostrarLoading(true);
+            tentativaAtual = 0;
 
-            if (!dados.length) {
-                container.innerHTML = `
-                    <div class="text-center py-5 my-5">
-                        <i class="fas fa-search fa-4x text-muted mb-4"></i>
-                        <h4 class="text-muted mb-1">Nenhum pregão encontrado</h4>
-                        <p class="text-muted">Tente buscar por número do pregão, órgão ou cidade</p>
+            try {
+                let dados = null;
+
+                // ✅ PRIORIDADE 1: Dados locais (dados.json - REAL)
+                console.log('📁 Tentando dados.json (dados reais do PNCP)...');
+                dados = await carregarDadosLocal();
+
+                // ✅ PRIORIDADE 2: API oficial
+                if (!dados) {
+                    console.log('🌐 Tentando API PNCP Oficial...');
+                    dados = await carregarDadosAPI();
+                }
+
+                // ✅ PRIORIDADE 3: Dados demo
+                if (!dados) {
+                    if (CONFIG.USE_MOCK_DATA) {
+                        console.log('📊 Usando dados de demonstração');
+                        exibirAlerta('warning', 'Modo Demo', 'Execute: python coleta_pncp.py para dados reais');
+                        dados = obterDadosMock();
+                    }
+                }
+
+                // Processar dados REAIS
+                if (dados && dados.length > 0) {
+                    dadosOriginais = [...dados];
+                    preencherFiltros(dados);
+                    atualizarTabela(dados);
+                    analisarResultadosItens(dados);
+                    analisarResultadosFornecedores(dados);
+                    console.log('✅ ' + dados.length + ' licitações reais carregadas');
+                    
+                    // Auto-refresh
+                    setTimeout(() => {
+                        console.log('🔄 Auto-refresh em ' + (CONFIG.AUTO_REFRESH/1000) + 's...');
+                        carregarDados();
+                    }, CONFIG.AUTO_REFRESH);
+                } else {
+                    exibirAlerta('danger', '⚠️ Sem Dados', 'Execute: python coleta_pncp.py --output dados.json');
+                    atualizarCards(0, 0, 0, 0);
+                }
+
+            } catch (erro) {
+                console.error('❌ Erro crítico:', erro);
+                exibirAlerta('danger', '❌ Erro', erro.message);
+                atualizarCards(0, 0, 0, 0);
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+
+        // ==================== PREENCHIMENTO DE FILTROS ====================
+
+        function preencherFiltros(data) {
+            const orgaos = new Set();
+            const ufs = new Set();
+            const uasgs = new Set();
+            const fornecedores = new Set();
+
+            data.forEach(lic => {
+                if (lic.orgao_nome) orgaos.add(lic.orgao_nome);
+                if (lic.uf) ufs.add(lic.uf);
+                if (lic.uasg) uasgs.add(lic.uasg);
+                if (lic.fornecedor) fornecedores.add(lic.fornecedor);
+            });
+
+            // Preencher Órgãos
+            const selectOrgao = document.getElementById('filtro-orgao');
+            selectOrgao.innerHTML = '<option value="">Todos os Órgãos</option>';
+            Array.from(orgaos).sort().forEach(orgao => {
+                const option = document.createElement('option');
+                option.value = orgao;
+                option.textContent = orgao;
+                selectOrgao.appendChild(option);
+            });
+
+            // Preencher UFs
+            const selectUf = document.getElementById('filtro-uf');
+            selectUf.innerHTML = '<option value="">Todos os Estados</option>';
+            Array.from(ufs).sort().forEach(uf => {
+                const option = document.createElement('option');
+                option.value = uf;
+                option.textContent = uf;
+                selectUf.appendChild(option);
+            });
+
+            // Preencher UASGs
+            const selectUasg = document.getElementById('filtro-uasg');
+            selectUasg.innerHTML = '<option value="">Todos os UASG</option>';
+            Array.from(uasgs).sort().forEach(uasg => {
+                const option = document.createElement('option');
+                option.value = uasg;
+                option.textContent = uasg;
+                selectUasg.appendChild(option);
+            });
+
+            // Preencher Fornecedores
+            const selectFornecedor = document.getElementById('filtro-fornecedor');
+            selectFornecedor.innerHTML = '<option value="">Todos os Fornecedores</option>';
+            Array.from(fornecedores).sort().forEach(fornecedor => {
+                const option = document.createElement('option');
+                option.value = fornecedor;
+                option.textContent = fornecedor;
+                selectFornecedor.appendChild(option);
+            });
+        }
+
+        // ==================== APLICAÇÃO DE FILTROS ====================
+
+        function aplicarFiltros() {
+            const filtroOrgao = document.getElementById('filtro-orgao').value;
+            const filtroUf = document.getElementById('filtro-uf').value;
+            const filtroUasg = document.getElementById('filtro-uasg').value;
+            const filtroFornecedor = document.getElementById('filtro-fornecedor').value;
+            const filtroPregao = document.getElementById('filtro-pregao').value.toLowerCase();
+            const filtroTipoPregao = document.getElementById('filtro-tipo-pregao').value;
+
+            const dadosFiltrados = dadosOriginais.filter(lic => {
+                const matchOrgao = !filtroOrgao || lic.orgao_nome === filtroOrgao;
+                const matchUf = !filtroUf || lic.uf === filtroUf;
+                const matchUasg = !filtroUasg || lic.uasg === filtroUasg;
+                const matchFornecedor = !filtroFornecedor || lic.fornecedor === filtroFornecedor;
+                const matchTipoPregao = !filtroTipoPregao || lic.tipo_pregao === filtroTipoPregao;
+                const matchPregao = !filtroPregao || 
+                    (lic.numero_pregao && lic.numero_pregao.toLowerCase().includes(filtroPregao)) ||
+                    (lic.id_pncp && lic.id_pncp.toLowerCase().includes(filtroPregao));
+
+                return matchOrgao && matchUf && matchUasg && matchFornecedor && matchTipoPregao && matchPregao;
+            });
+
+            atualizarTabela(dadosFiltrados);
+            analisarResultadosItens(dadosFiltrados);
+            analisarResultadosFornecedores(dadosFiltrados);
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtro-orgao').value = '';
+            document.getElementById('filtro-uf').value = '';
+            document.getElementById('filtro-uasg').value = '';
+            document.getElementById('filtro-fornecedor').value = '';
+            document.getElementById('filtro-tipo-pregao').value = '';
+            document.getElementById('filtro-pregao').value = '';
+            atualizarTabela(dadosOriginais);
+            analisarResultadosItens(dadosOriginais);
+            analisarResultadosFornecedores(dadosOriginais);
+        }
+
+        // ==================== ATUALIZAÇÃO DA TABELA ====================
+
+        function atualizarTabela(dados) {
+            let totalValor = 0;
+            let totalItens = 0;
+            const municipios = new Set();
+
+            const corpo = document.getElementById('corpo-tabela');
+            corpo.innerHTML = '';
+
+            if (dados.length === 0) {
+                corpo.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-message">
+                                <i class="fas fa-search"></i>
+                                <p>Nenhuma licitação encontrada com esses filtros</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                
+                atualizarCards(0, 0, 0, 0);
+                
+                if (dataTable) {
+                    dataTable.destroy();
+                }
+                dataTable = $('#tabela-licitacoes').DataTable({
+                    language: {
+                        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
+                    }
+                });
+                return;
+            }
+
+            dados.forEach(lic => {
+                municipios.add((lic.cidade || 'N/D') + '/' + (lic.uf || 'N/D'));
+
+                const fornecedor = lic.fornecedor || 'N/D';
+
+                if (lic.itens && lic.itens.length > 0) {
+                    lic.itens.forEach(it => {
+                        const valor = parseFloat(it.valor_total_item || 0);
+                        totalValor += valor;
+                        totalItens++;
+                    });
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <small>${formatarData(lic.data_homologacao)}</small>
+                    </td>
+                    <td>
+                        <strong>${lic.orgao_nome || 'N/D'}</strong><br>
+                        <small class="text-muted">${lic.cidade || 'N/D'}, ${lic.uf || 'N/D'}</small>
+                    </td>
+                    <td>
+                        <code>${lic.id_pncp || lic.numero_pregao || 'N/D'}</code>
+                    </td>
+                    <td>${formatarData(lic.data_inicio_propostas)}</td>
+                    <td>${formatarData(lic.data_fim_propostas)}</td>
+                    <td>
+                        <span class="badge bg-success">${fornecedor}</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary detalhes-btn" 
+                                onclick="abrirDetalhes('${lic.id_pncp}')">
+                            <i class="fas fa-eye"></i> Detalhes
+                        </button>
+                    </td>
+                `;
+                row.dataset.licData = JSON.stringify(lic);
+                corpo.appendChild(row);
+            });
+
+            atualizarCards(dados.length, totalValor, totalItens, municipios.size);
+
+            if (dataTable) {
+                dataTable.destroy();
+            }
+            dataTable = $('#tabela-licitacoes').DataTable({
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
+                },
+                order: [[0, 'desc']],
+                pageLength: 10,
+                responsive: true
+            });
+        }
+
+        function atualizarCards(totalLic, totalVal, totalIt, totalMun) {
+            document.getElementById('total-lic').innerText = totalLic.toLocaleString('pt-BR');
+            document.getElementById('total-val').innerText = formatarMoeda(totalVal);
+            document.getElementById('total-itens').innerText = totalIt.toLocaleString('pt-BR');
+            document.getElementById('total-mun').innerText = totalMun;
+        }
+
+        // ==================== MODAL DE DETALHES ====================
+
+        function abrirDetalhes(idPncp) {
+            const licData = dadosOriginais.find(lic => lic.id_pncp === idPncp);
+            
+            if (!licData) {
+                alert('Licitação não encontrada');
+                return;
+            }
+
+            let tabelaItensHtml = '';
+            if (licData.itens && licData.itens.length > 0) {
+                tabelaItensHtml = `
+                    <h6 class="mt-4 mb-3">
+                        <i class="fas fa-list"></i> Itens da Licitação
+                    </h6>
+                    <table class="table table-modal table-sm">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Descrição</th>
+                                <th>Qtd</th>
+                                <th>Valor Unit.</th>
+                                <th>Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${licData.itens.map(item => `
+                                <tr>
+                                    <td>${item.numero_item || '-'}</td>
+                                    <td>${item.descricao || '-'}</td>
+                                    <td>${item.quantidade || 0}</td>
+                                    <td>${formatarMoeda(item.valor_unitario)}</td>
+                                    <td><strong>${formatarMoeda(item.valor_total_item)}</strong></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            const html = `
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <span class="detail-label">ID PNCP</span>
+                        <span class="detail-value">${licData.id_pncp || 'N/D'}</span>
                     </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Nº Pregão</span>
+                        <span class="detail-value">${licData.numero_pregao || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row full">
+                    <div class="detail-item">
+                        <span class="detail-label">Órgão</span>
+                        <span class="detail-value">${licData.orgao_nome || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <span class="detail-label">Cidade</span>
+                        <span class="detail-value">${licData.cidade || 'N/D'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Estado</span>
+                        <span class="detail-value">${licData.uf || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <span class="detail-label">UASG</span>
+                        <span class="detail-value">${licData.uasg || 'N/D'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Código Órgão</span>
+                        <span class="detail-value">${licData.orgao_codigo || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row full">
+                    <div class="detail-item">
+                        <span class="detail-label">Objeto</span>
+                        <span class="detail-value">${licData.objeto || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <span class="detail-label">Data Início</span>
+                        <span class="detail-value">${formatarData(licData.data_inicio_propostas)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Data Fim</span>
+                        <span class="detail-value">${formatarData(licData.data_fim_propostas)}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <span class="detail-label">Data Homologação</span>
+                        <span class="detail-value">${formatarData(licData.data_homologacao)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Fornecedor Principal</span>
+                        <span class="detail-value">${licData.fornecedor || 'N/D'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-row full">
+                    <div class="detail-item">
+                        <span class="detail-label">CNPJ Fornecedor</span>
+                        <span class="detail-value">${licData.cnpj_fornecedor || 'N/D'}</span>
+                    </div>
+                </div>
+
+                ${tabelaItensHtml}
+            `;
+
+            document.getElementById('modalBody').innerHTML = html;
+            const modal = new bootstrap.Modal(document.getElementById('detalhesModal'));
+            modal.show();
+        }
+
+        // ==================== ANÁLISE DE RESULTADOS POR ITEM ====================
+
+        function analisarResultadosItens(dados) {
+            const itensMap = new Map();
+
+            dados.forEach(lic => {
+                if (lic.itens && lic.itens.length > 0) {
+                    lic.itens.forEach(item => {
+                        const chave = item.descricao || 'N/D';
+                        
+                        if (!itensMap.has(chave)) {
+                            itensMap.set(chave, {
+                                descricao: chave,
+                                quantidade_total: 0,
+                                valor_total: 0,
+                                fornecedores: new Set(),
+                                ocorrencias: 0
+                            });
+                        }
+
+                        const registro = itensMap.get(chave);
+                        registro.quantidade_total += parseFloat(item.quantidade || 0);
+                        registro.valor_total += parseFloat(item.valor_total_item || 0);
+                        registro.ocorrencias++;
+                        if (lic.fornecedor) {
+                            registro.fornecedores.add(lic.fornecedor);
+                        }
+                    });
+                }
+            });
+
+            // Converter para array, ordenar e pegar top 10
+            const itensOrdenados = Array.from(itensMap.values())
+                .sort((a, b) => b.valor_total - a.valor_total)
+                .slice(0, 10);
+
+            // Renderizar tabela
+            const corpo = document.getElementById('corpo-itens');
+            corpo.innerHTML = '';
+
+            if (itensOrdenados.length === 0) {
+                corpo.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox"></i> Nenhum item encontrado
+                        </td>
+                    </tr>
                 `;
                 return;
             }
 
-            dados.forEach((lic, index) => {
-                const totalLic = lic.itens?.reduce((acc, it) => acc + (it.valor_total || 0), 0) || 0;
-                const fornecedorNome = lic.fornecedor_nome || todosFornecedores[lic.cnpj_fornecedor] || `CNPJ ${lic.cnpj_fornecedor?.slice(-8)}`;
-                
-                const card = document.createElement('div');
-                card.className = 'card-licitacao';
-                card.innerHTML = `
-                    <div class="p-4">
-                        <div class="row align-items-start">
-                            <div class="col-auto">
-                                <div class="bg-gradient rounded-circle d-flex align-items-center justify-content-center text-white" 
-                                     style="width: 56px; height: 56px;">
-                                    <i class="fas fa-gavel fs-5"></i>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="num-pregao-destaque mb-2">${lic.numero_pregao}</div>
-                                <div class="orgao-nome mb-2">${lic.orgao_nome}</div>
-                                <div class="mb-3">
-                                    <i class="fas fa-map-marker-alt text-muted me-2"></i>
-                                    <span class="fw-medium">${lic.cidade} - ${lic.uf}</span>
-                                    <span class="badge bg-secondary ms-2">UASG: ${lic.uasg}</span>
-                                </div>
-                                <div class="fornecedor-nome mb-3">${fornecedorNome}</div>
-                            </div>
-                            <div class="col-auto text-end">
-                                <div class="valor-total mb-2">${formatMoney(totalLic)}</div>
-                                <div class="small text-muted mb-2">${lic.itens?.length || 0} itens</div>
-                                <div>
-                                    <a href="${lic.link_edital || '#'}" target="_blank" class="btn btn-outline-primary btn-sm me-2">
-                                        <i class="fas fa-external-link-alt"></i> Edital
-                                    </a>
-                                    <button class="btn btn-primary btn-sm btn-expandir" type="button" 
-                                            data-bs-toggle="collapse" data-bs-target="#collapse-${index}">
-                                        <i class="fas fa-chevron-down"></i> Detalhes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="collapse" id="collapse-${index}">
-                        <div class="info-prazos px-4 pb-4">
-                            <div class="row g-3">
-                                <div class="col-md-3">
-                                    <span class="info-label"><i class="fas fa-calendar-check me-1"></i>Data Resultado</span>
-                                    <div class="info-value">${formatDate(lic.data_resultado)}</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="info-label"><i class="far fa-calendar me-1"></i>Ínicio Propostas</span>
-                                    <div class="info-value">${formatDate(lic.data_inicio_propostas)}</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="info-label"><i class="far fa-calendar-times me-1"></i>Fim Propostas</span>
-                                    <div class="info-value">${formatDate(lic.data_fim_propostas)}</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="info-label"><i class="fas fa-fingerprint me-1"></i>ID PNCP</span>
-                                    <div class="info-value"><span class="id-pncp">${lic.id_pncp || 'N/A'}</span></div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-8">
-                                    <span class="info-label">Objeto da Licitação</span>
-                                    <div class="info-value" style="line-height: 1.5;">${lic.objeto}</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <span class="info-label">CNPJ Vencedor</span>
-                                    <div class="info-value">${lic.cnpj_fornecedor}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        ${lic.itens && lic.itens.length ? `
-                        <div class="table-responsive px-4 pb-4">
-                            <table class="table table-itens">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Descrição</th>
-                                        <th class="text-center">Qtd</th>
-                                        <th class="text-end">Unitário</th>
-                                        <th class="text-end">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${lic.itens.map(item => `
-                                        <tr>
-                                            <td class="fw-bold text-center">${item.numero_item}</td>
-                                            <td class="text-truncate" style="max-width: 300px;" title="${item.descricao}">
-                                                ${item.descricao}
-                                            </td>
-                                            <td class="text-center fw-medium">${item.quantidade || 0}</td>
-                                            <td class="text-end text-muted small">${formatMoney(item.valor_unitario)}</td>
-                                            <td class="text-end fw-bold text-success fs-6">${formatMoney(item.valor_total)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        ` : `
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-info-circle fa-2x mb-2"></i>
-                            <div>Itens não disponíveis</div>
-                        </div>
-                        `}
-                    </div>
+            itensOrdenados.forEach(item => {
+                const valorMedio = item.ocorrencias > 0 ? item.valor_total / item.ocorrencias : 0;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <strong>${item.descricao}</strong>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">${item.quantidade_total.toLocaleString('pt-BR')}</span>
+                    </td>
+                    <td>
+                        <strong>${formatarMoeda(item.valor_total)}</strong>
+                    </td>
+                    <td>
+                        ${formatarMoeda(valorMedio)}
+                    </td>
+                    <td>
+                        <small class="text-muted">${item.fornecedores.size} fornecedor(es)</small>
+                    </td>
                 `;
-                container.appendChild(card);
+                corpo.appendChild(row);
             });
         }
 
-        // Busca otimizada (prioriza pregão)
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const termo = e.target.value.toLowerCase().trim();
-            const filtrados = dadosGlobais.filter(lic => 
-                (lic.numero_pregao && lic.numero_pregao.toLowerCase().includes(termo)) ||
-                lic.orgao_nome.toLowerCase().includes(termo) ||
-                (lic.fornecedor_nome && lic.fornecedor_nome.toLowerCase().includes(termo)) ||
-                lic.cidade.toLowerCase().includes(termo) ||
-                lic.uf.includes(termo.toUpperCase()) ||
-                (lic.uasg && lic.uasg.includes(termo))
-            );
-            renderizarLista(filtrados);
+        // ==================== ANÁLISE DE RESULTADOS POR FORNECEDOR ====================
+
+        function analisarResultadosFornecedores(dados) {
+            const fornecedoresMap = new Map();
+
+            dados.forEach(lic => {
+                const chave = lic.fornecedor || 'N/D';
+                
+                if (!fornecedoresMap.has(chave)) {
+                    fornecedoresMap.set(chave, {
+                        nome: chave,
+                        cnpj: lic.cnpj_fornecedor || 'N/D',
+                        total_itens: 0,
+                        total_licitacoes: 0,
+                        valor_total: 0,
+                        itens_unicos: new Set()
+                    });
+                }
+
+                const registro = fornecedoresMap.get(chave);
+                registro.total_licitacoes++;
+
+                if (lic.itens && lic.itens.length > 0) {
+                    lic.itens.forEach(item => {
+                        registro.total_itens++;
+                        registro.valor_total += parseFloat(item.valor_total_item || 0);
+                        registro.itens_unicos.add(item.descricao);
+                    });
+                }
+            });
+
+            // Converter para array, ordenar e pegar top 10
+            const fornecedoresOrdenados = Array.from(fornecedoresMap.values())
+                .sort((a, b) => b.valor_total - a.valor_total)
+                .slice(0, 10);
+
+            // Renderizar tabela
+            const corpo = document.getElementById('corpo-fornecedores');
+            corpo.innerHTML = '';
+
+            if (fornecedoresOrdenados.length === 0) {
+                corpo.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-store"></i> Nenhum fornecedor encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            fornecedoresOrdenados.forEach(forn => {
+                const valorMedio = forn.total_licitacoes > 0 ? forn.valor_total / forn.total_licitacoes : 0;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <strong>${forn.nome}</strong>
+                    </td>
+                    <td>
+                        <code style="font-size: 0.75rem;">${forn.cnpj}</code>
+                    </td>
+                    <td>
+                        <span class="badge bg-success">${forn.itens_unicos.size}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">${forn.total_licitacoes}</span>
+                    </td>
+                    <td>
+                        <strong>${formatarMoeda(forn.valor_total)}</strong>
+                    </td>
+                    <td>
+                        ${formatarMoeda(valorMedio)}
+                    </td>
+                `;
+                corpo.appendChild(row);
+            });
+        }
+
+        // ==================== EVENT LISTENERS ====================
+
+        document.getElementById('btn-filtrar').addEventListener('click', aplicarFiltros);
+        document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
+
+        document.getElementById('filtro-pregao').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') aplicarFiltros();
         });
 
-        // Auto-refresh
-        setInterval(carregarDados, 10 * 60 * 1000);
+        // ==================== INICIALIZAÇÃO ====================
 
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', carregarDados);
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Dashboard iniciando...');
+            console.log('Configuração:', CONFIG);
+            carregarDados();
+        });
     </script>
 </body>
 </html>
