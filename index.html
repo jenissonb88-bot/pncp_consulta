@@ -1,1218 +1,282 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>PNCP Monitor - Análise Completa</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <style>
-    :root {
-      --primary: #1e40af;
-      --primary-dark: #1e3a8a;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --text: #1e293b;
-      --border: #e2e8f0;
-      --danger: #dc2626;
-      --success: #059669;
-      --warning: #d97706;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    header {
-      background: var(--primary);
-      color: #fff;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-
-    header h1 {
-      margin: 0 0 4px 0;
-      font-size: 1.5rem;
-    }
-
-    header p {
-      margin: 0;
-      font-size: 0.95rem;
-      opacity: 0.9;
-    }
-
-    #status {
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      margin: 12px 0;
-    }
-
-    .status-loading { background: #fef3c7; color: #92400e; }
-    .status-success { background: #d1fae5; color: #065f46; }
-    .status-error   { background: #fee2e2; color: #991b1b; }
-
-    .controls {
-      background: var(--card);
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .controls-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .controls label {
-      font-size: 0.85rem;
-      color: #475569;
-    }
-
-    .controls input,
-    .controls select {
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      font-size: 0.9rem;
-    }
-
-    .controls button {
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: none;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .btn-secondary {
-      background: #e2e8f0;
-      color: #111827;
-    }
-
-    .btn-secondary:hover {
-      background: #d1d5db;
-    }
-
-    .btn-link {
-      background: var(--primary);
-      color: #fff;
-      padding: 4px 8px;
-      font-size: 0.75rem;
-    }
-
-    .btn-link:hover {
-      background: var(--primary-dark);
-    }
-
-    .table-wrapper {
-      background: var(--card);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      overflow: auto;
-      margin-bottom: 12px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    th, td {
-      border-bottom: 1px solid var(--border);
-      padding: 6px 8px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      background: #e5e7eb;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      font-weight: 600;
-    }
-
-    tr:nth-child(even) td {
-      background: #f9fafb;
-    }
-
-    a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    a:hover { text-decoration: underline; }
-
-    .tag {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      margin: 2px 2px;
-    }
-
-    .tag-ok { background: #dcfce7; color: var(--success); }
-    .tag-warn { background: #fef3c7; color: var(--warning); }
-    .tag-bad { background: #fee2e2; color: var(--danger); }
-
-    .pagination {
-      margin: 8px 0;
-      font-size: 0.85rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .pagination button {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      font-size: 0.8rem;
-      background: #fff;
-      cursor: pointer;
-    }
-
-    .pagination button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 50;
-      align-items: center;
-      justify-content: center;
-      overflow-y: auto;
-    }
-
-    .modal.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: #fff;
-      max-width: 1200px;
-      width: 95%;
-      max-height: 90vh;
-      border-radius: 8px;
-      overflow: auto;
-      border: 1px solid var(--border);
-      margin: 20px auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
-      background: #f1f5f9;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .modal-header h2 {
-      font-size: 1rem;
-      margin: 0;
-    }
-
-    .modal-close {
-      border: none;
-      background: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-    }
-
-    .modal-body {
-      padding: 12px;
-    }
-
-    /* Abas */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      border-bottom: 2px solid var(--border);
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .tab-btn {
-      padding: 8px 12px;
-      border: none;
-      background: #e5e7eb;
-      cursor: pointer;
-      border-radius: 4px 4px 0 0;
-      font-size: 0.85rem;
-      transition: background 0.2s;
-    }
-
-    .tab-btn.active {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Resumo */
-    .resumo-box {
-      background: #f8fafc;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      border-left: 4px solid var(--primary);
-    }
-
-    .resumo-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 0.9rem;
-    }
-
-    .resumo-item strong {
-      color: var(--primary);
-    }
-
-    .valor {
-      font-weight: 600;
-      color: var(--success);
-      font-family: 'Courier New', monospace;
-    }
-
-    .link-pncp {
-      display: inline-block;
-      margin-top: 4px;
-    }
-
-    @media (max-width: 768px) {
-      th, td {
-        padding: 4px 6px;
-        font-size: 0.75rem;
-      }
-      header h1 {
-        font-size: 1.2rem;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sniper PNCP 2025 - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .stats-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-badge {
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-size: 0.85rem;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>PNCP Monitor – Análise Completa</h1>
-      <p>Pregão Eletrônico – Seus itens ganhos, concorrentes e fracassados.</p>
-    </header>
-
-    <div id="status" class="status-loading">
-      Carregando dados do PNCP...
-    </div>
-
-    <div class="controls">
-      <div class="controls-group">
-        <label for="busca">Busca:</label>
-        <input id="busca" type="text" placeholder="Órgão, objeto, fornecedor...">
-      </div>
-
-      <div class="controls-group">
-        <label for="filtro-uf">UF:</label>
-        <select id="filtro-uf">
-          <option value="">Todas</option>
-        </select>
-      </div>
-
-      <div class="controls-group">
-        <button class="btn-secondary" id="btn-limpar">Limpar</button>
-        <button class="btn-primary" id="btn-aplicar">Aplicar</button>
-      </div>
-    </div>
-
-    <div class="pagination">
-      <span id="info-resultado">0 licitações</span>
-      <div>
-        <button id="prev-page">&laquo; Anterior</button>
-        <span id="page-info">Página 1</span>
-        <button id="next-page">Próxima &raquo;</button>
-      </div>
-    </div>
-
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Órgão/UASG</th>
-            <th>Pregão</th>
-            <th>Período Propostas</th>
-            <th>Cidade/UF</th>
-            <th>Objeto (sintético)</th>
-            <th>Seus Itens</th>
-            <th>Total Ganho</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpo-tabela"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Modal de análise completa -->
-  <div id="modal-analise" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div>
-          <h2 id="modal-titulo">Análise da Licitação</h2>
-          <div class="link-pncp">
-            <a id="modal-link-pncp" href="#" target="_blank" class="btn-link">🔗 Abrir no PNCP</a>
-          </div>
-        </div>
-        <button class="modal-close" id="modal-fechar">&times;</button>
-      </div>
-      <div class="modal-body">
-        
-        <!-- Resumo rápido -->
-        <div class="resumo-box">
-          <div class="resumo-item">
-            <strong>Total ganho por você:</strong>
-            <span class="valor" id="resumo-total-seu">R$ 0,00</span>
-          </div>
-          <div class="resumo-item">
-            <strong>Itens (seus):</strong>
-            <span id="resumo-itens-seu">0</span>
-          </div>
-          <div class="resumo-item">
-            <strong>Itens (outros fornecedores):</strong>
-            <span id="resumo-itens-outros">0</span>
-          </div>
-          <div class="resumo-item">
-            <strong>Itens fracassados:</strong>
-            <span id="resumo-itens-fracasso">0</span>
-          </div>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold text-primary">
+                    <i class="fas fa-crosshairs"></i> Sniper PNCP Global 2025
+                </h2>
+                <p class="text-muted">Monitorização em tempo real de resultados homologados</p>
+            </div>
+            <div id="last-update" class="badge bg-dark p-2">
+                A carregar dados...
+            </div>
         </div>
 
-        <!-- Abas -->
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="seus-itens">Seus Itens</button>
-          <button class="tab-btn" data-tab="todos-fornecedores">Todos Fornecedores</button>
-          <button class="tab-btn" data-tab="fracassados">Fracassados</button>
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card bg-primary text-white p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="mb-0">Total Licitações</p>
+                            <h3 id="total-lic" class="fw-bold">0</h3>
+                        </div>
+                        <i class="fas fa-file-contract fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card bg-success text-white p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="mb-0">Valor Total</p>
+                            <h3 id="total-val" class="fw-bold">R$ 0</h3>
+                        </div>
+                        <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card bg-info text-white p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="mb-0">Municípios</p>
+                            <h3 id="total-mun" class="fw-bold">0</h3>
+                        </div>
+                        <i class="fas fa-map-marker-alt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card bg-warning text-dark p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="mb-0">Itens Ganhos</p>
+                            <h3 id="total-itens" class="fw-bold">0</h3>
+                        </div>
+                        <i class="fas fa-pills fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Aba 1: Seus Itens -->
-        <div id="seus-itens" class="tab-content active">
-          <h3>Itens Ganhos por Você</h3>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Descrição</th>
-                  <th>Qtd</th>
-                  <th>Valor Unit.</th>
-                  <th>Valor Total</th>
-                  <th>Data Homol.</th>
-                </tr>
-              </thead>
-              <tbody id="tab-seus-itens-corpo"></tbody>
+        <!-- Tabela Principal -->
+        <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold text-dark mb-0">
+                    <i class="fas fa-table"></i> Licitações Homologadas
+                </h4>
+                <button id="refresh-btn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+            
+            <table id="tabela-licitacoes" class="table table-hover w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data Homologação</th>
+                        <th>Órgão / Município</th>
+                        <th>ID PNCP</th>
+                        <th>Início Propostas</th>
+                        <th>Fim Propostas</th>
+                        <th>Vencedor Principal</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela">
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="loading text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+                                Carregando dados do PNCP...
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
-          </div>
-
-          <h3 style="margin-top: 16px;">Resumo por Fornecedor (Você)</h3>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fornecedor</th>
-                  <th>CNPJ</th>
-                  <th>Total Ganho</th>
-                </tr>
-              </thead>
-              <tbody id="tab-resumo-fornecedor-corpo"></tbody>
-            </table>
-          </div>
         </div>
-
-        <!-- Aba 2: Todos Fornecedores -->
-        <div id="todos-fornecedores" class="tab-content">
-          <h3>Todos os Fornecedores e Seus Itens</h3>
-          <p style="font-size: 0.9rem; color: #666;">
-            Inclui seus itens + itens ganhos por concorrentes. Compare suas ofertas com as vencedoras.
-          </p>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Descrição</th>
-                  <th>Fornecedor</th>
-                  <th>CNPJ</th>
-                  <th>Qtd</th>
-                  <th>Valor Unit.</th>
-                  <th>Valor Total</th>
-                  <th>Data Homol.</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="tab-todos-fornecedores-corpo"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Aba 3: Fracassados -->
-        <div id="fracassados" class="tab-content">
-          <h3>Itens Fracassados ou Desertos</h3>
-          <p style="font-size: 0.9rem; color: #666;">
-            Itens que não tiveram resultado ou nenhum fornecedor ganhou. Oportunidades para complementação.
-          </p>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Descrição</th>
-                  <th>Qtd Estimada</th>
-                  <th>Valor Estimado Unit.</th>
-                  <th>Valor Estimado Total</th>
-                  <th>Situação</th>
-                </tr>
-              </thead>
-              <tbody id="tab-fracassados-corpo"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
     </div>
-  </div>
 
-  <script>
-    const ITENS_POR_PAGINA = 20;
-    let dadosCompletos = [];
-    let dadosFiltrados = [];
-    let paginaAtual = 1;
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        let dataTable;
 
-    // ===== CACHE SYSTEM =====
-    const CACHE_KEY = 'pncp_dados_cache';
-    const CACHE_TIMESTAMP_KEY = 'pncp_cache_timestamp';
-    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
-    const idIndexMap = new Map(); // Map rápido por ID para deduplicação
-
-    function obterCacheLocal() {
-      try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-        
-        if (!cached || !timestamp) return null;
-
-        const age = Date.now() - parseInt(timestamp, 10);
-        if (age > CACHE_TTL) {
-          // Cache expirado
-          localStorage.removeItem(CACHE_KEY);
-          localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-          return null;
+        // Função para formatar data ISO para BR
+        function formatarData(dataStr) {
+            if (!dataStr) return '<span class="text-danger">Pendente</span>';
+            const data = new Date(dataStr);
+            return data.toLocaleDateString('pt-BR') + ' ' + 
+                   data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
         }
 
-        return JSON.parse(cached);
-      } catch (e) {
-        console.warn('Erro ao ler cache:', e);
-        return null;
-      }
-    }
+        // Carregar o ficheiro dados.json
+        function carregarDados() {
+            fetch('dados.json')
+                .then(response => {
+                    if (!response.ok) throw new Error('Arquivo não encontrado');
+                    return response.json();
+                })
+                .then(data => {
+                    let totalValor = 0;
+                    let totalItens = 0;
+                    const municipios = new Set();
+                    
+                    const corpo = document.getElementById('corpo-tabela');
+                    corpo.innerHTML = '';
 
-    function salvarCacheLocal(dados) {
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(dados));
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-      } catch (e) {
-        console.warn('Erro ao salvar cache:', e);
-      }
-    }
+                    data.forEach(lic => {
+                        // Calcular totais
+                        municipios.add(lic.cidade + '/' + lic.uf);
+                        
+                        let valorLic = 0;
+                        let principalFornecedor = '';
+                        
+                        if (lic.itens && lic.itens.length > 0) {
+                            lic.itens.forEach(it => {
+                                totalValor += it.valor_total_item || 0;
+                                valorLic += it.valor_total_item || 0;
+                                totalItens++;
+                                if (!principalFornecedor) {
+                                    principalFornecedor = it.fornecedor || 'N/D';
+                                }
+                            });
+                        }
 
-    function deduplica(dados) {
-      // Remove duplicatas usando Map por ID único
-      const dedupMap = new Map();
+                        // Criar linha da tabela
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong class="text-success">${formatarData(lic.data_homologacao)}</strong></td>
+                            <td>
+                                <strong>${lic.orgao_nome || 'N/D'}</strong><br>
+                                <small class="text-muted">${lic.cidade}, ${lic.uf}</small>
+                            </td>
+                            <td>
+                                <code class="text-primary">${lic.id_pncp || lic.numero_pregao}</code>
+                            </td>
+                            <td>${formatarData(lic.data_inicio_propostas)}</td>
+                            <td>${formatarData(lic.data_fim_propostas)}</td>
+                            <td>
+                                <small class="badge bg-success">${principalFornecedor}</small>
+                            </td>
+                            <td>
+                                <a href="${lic.link_edital || '#'}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt"></i> Portal
+                                </a>
+                            </td>
+                        `;
+                        corpo.appendChild(row);
+                    });
 
-      dados.forEach(lic => {
-        const chaveUnica = `${lic.id_pncp}_${lic.numero_pregao}_${lic.orgao_codigo}`;
-        if (!dedupMap.has(chaveUnica)) {
-          dedupMap.set(chaveUnica, lic);
-        } else {
-          // Se já existe, mescla dados (atualiza se mais recente)
-          const existente = dedupMap.get(chaveUnica);
-          if (lic.data_atualizacao > existente.data_atualizacao) {
-            dedupMap.set(chaveUnica, lic);
-          }
+                    // Atualizar Cards
+                    document.getElementById('total-lic').innerText = data.length;
+                    document.getElementById('total-val').innerText = 
+                        totalValor.toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        });
+                    document.getElementById('total-mun').innerText = municipios.size;
+                    document.getElementById('total-itens').innerText = totalItens;
+
+                    document.getElementById('last-update').innerText = 
+                        `Última Sincronização: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`;
+
+                    // Inicializar DataTable
+                    if (dataTable) dataTable.destroy();
+                    dataTable = $('#tabela-licitacoes').DataTable({
+                        language: {
+                            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
+                        },
+                        order: [[0, 'desc']],
+                        pageLength: 10,
+                        responsive: true
+                    });
+                })
+                .catch(err => {
+                    console.error('Erro ao carregar dados.json:', err);
+                    document.getElementById('corpo-tabela').innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-danger py-5">
+                                <i class="fas fa-exclamation-triangle fa-3x mb-3 d-block"></i>
+                                <h4>Erro ao carregar dados.json</h4>
+                                <p>Certifique-se de que o arquivo <code>dados.json</code> existe no mesmo diretório.</p>
+                                <small class="text-muted">Execute: <code>cp dados_pncp.json dados.json</code></small>
+                            </td>
+                        </tr>
+                    `;
+                });
         }
-      });
 
-      return Array.from(dedupMap.values());
-    }
-
-    function mesclaCacheComNovos(cacheAntigo, dadosNovos) {
-      // Cria mapa do cache antigo
-      const mapaAntigo = new Map();
-      cacheAntigo.forEach(lic => {
-        const chave = `${lic.id_pncp}_${lic.numero_pregao}`;
-        mapaAntigo.set(chave, lic);
-      });
-
-      // Atualiza com novos dados (substitui se chave existe)
-      const resultado = cacheAntigo.slice();
-      dadosNovos.forEach(novoLic => {
-        const chave = `${novoLic.id_pncp}_${novoLic.numero_pregao}`;
-        const idx = resultado.findIndex(l => {
-          const chaveExistente = `${l.id_pncp}_${l.numero_pregao}`;
-          return chaveExistente === chave;
+        // Event Listeners
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            document.getElementById('corpo-tabela').innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+                        Atualizando...
+                    </td>
+                </tr>
+            `;
+            carregarDados();
         });
 
-        if (idx >= 0) {
-          // Já existe, atualiza
-          resultado[idx] = novoLic;
-        } else {
-          // Novo, adiciona
-          resultado.push(novoLic);
-        }
-      });
+        // Auto-refresh a cada 5 minutos
+        setInterval(carregarDados, 300000);
 
-      return deduplica(resultado);
-    }
-
-    async function carregarDadosPncp() {
-      const status = document.getElementById('status');
-      
-      // Tentar carregar do cache primeiro
-      const cacheLocal = obterCacheLocal();
-      if (cacheLocal && cacheLocal.length > 0) {
-        status.textContent = `✓ Cache carregado (${cacheLocal.length} licitações). Verificando atualizações...`;
-        status.className = 'status-success';
-        
-        dadosCompletos = cacheLocal;
-        dadosFiltrados = dadosCompletos.slice();
-        preencherFiltroUF();
-        paginaAtual = 1;
-        atualizarTabela();
-
-        // Atualizar em background
-        atualizarDadosEmBackground(cacheLocal);
-        return;
-      }
-
-      // Sem cache, carregar normalmente
-      status.textContent = 'Carregando dados do PNCP...';
-      status.className = 'status-loading';
-
-      try {
-        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const dados = await resp.json();
-        
-        // Deduplicar antes de salvar
-        dadosCompletos = deduplica(dados);
-        salvarCacheLocal(dadosCompletos);
-        
-        dadosFiltrados = dadosCompletos.slice();
-        preencherFiltroUF();
-        paginaAtual = 1;
-        atualizarTabela();
-        
-        status.textContent = `✓ Dados carregados com sucesso (${dadosCompletos.length} licitações).`;
-        status.className = 'status-success';
-      } catch (e) {
-        status.textContent = 'Erro ao carregar: ' + e.message;
-        status.className = 'status-error';
-      }
-    }
-
-    async function atualizarDadosEmBackground(cacheAntigo) {
-      try {
-        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
-        if (!resp.ok) return;
-        
-        const dadosNovos = await resp.json();
-        const mesclado = mesclaCacheComNovos(cacheAntigo, dadosNovos);
-        
-        if (mesclado.length > cacheAntigo.length) {
-          // Teve novos dados
-          dadosCompletos = mesclado;
-          salvarCacheLocal(mesclado);
-          
-          const status = document.getElementById('status');
-          status.textContent = `✓ Cache atualizado (+${mesclado.length - cacheAntigo.length} novos).`;
-          status.className = 'status-success';
-          
-          // Atualizar tabela se necessário
-          aplicarFiltros();
-        }
-      } catch (e) {
-        console.warn('Erro ao atualizar em background:', e);
-      }
-    }
-
-    // Botão para limpar cache manualmente
-    function adicionarBotaoLimparCache() {
-      const controlsGroup = document.createElement('div');
-      controlsGroup.className = 'controls-group';
-      
-      const btnLimpar = document.createElement('button');
-      btnLimpar.className = 'btn-secondary';
-      btnLimpar.textContent = '🔄 Atualizar Cache';
-      btnLimpar.style.fontSize = '0.75rem';
-      btnLimpar.addEventListener('click', () => {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        location.reload();
-      });
-      
-      controlsGroup.appendChild(btnLimpar);
-      document.querySelector('.controls').appendChild(controlsGroup);
-    }
-
-    // ===== CACHE SYSTEM =====
-    const CACHE_KEY = 'pncp_dados_cache';
-    const CACHE_TIMESTAMP_KEY = 'pncp_cache_timestamp';
-    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
-    const idIndexMap = new Map(); // Map rápido por ID para deduplicação
-
-    function obterCacheLocal() {
-      try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-        
-        if (!cached || !timestamp) return null;
-
-        const age = Date.now() - parseInt(timestamp, 10);
-        if (age > CACHE_TTL) {
-          // Cache expirado
-          localStorage.removeItem(CACHE_KEY);
-          localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-          return null;
-        }
-
-        return JSON.parse(cached);
-      } catch (e) {
-        console.warn('Erro ao ler cache:', e);
-        return null;
-      }
-    }
-
-    function salvarCacheLocal(dados) {
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(dados));
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-      } catch (e) {
-        console.warn('Erro ao salvar cache:', e);
-      }
-    }
-
-    function deduplica(dados) {
-      // Remove duplicatas usando Map por ID único
-      const dedupMap = new Map();
-
-      dados.forEach(lic => {
-        const chaveUnica = `${lic.id_pncp}_${lic.numero_pregao}_${lic.orgao_codigo}`;
-        if (!dedupMap.has(chaveUnica)) {
-          dedupMap.set(chaveUnica, lic);
-        } else {
-          // Se já existe, mescla dados (atualiza se mais recente)
-          const existente = dedupMap.get(chaveUnica);
-          if (lic.data_atualizacao > existente.data_atualizacao) {
-            dedupMap.set(chaveUnica, lic);
-          }
-        }
-      });
-
-      return Array.from(dedupMap.values());
-    }
-
-    function mesclaCacheComNovos(cacheAntigo, dadosNovos) {
-      // Cria mapa do cache antigo
-      const mapaAntigo = new Map();
-      cacheAntigo.forEach(lic => {
-        const chave = `${lic.id_pncp}_${lic.numero_pregao}`;
-        mapaAntigo.set(chave, lic);
-      });
-
-      // Atualiza com novos dados (substitui se chave existe)
-      const resultado = cacheAntigo.slice();
-      dadosNovos.forEach(novoLic => {
-        const chave = `${novoLic.id_pncp}_${novoLic.numero_pregao}`;
-        const idx = resultado.findIndex(l => {
-          const chaveExistente = `${l.id_pncp}_${l.numero_pregao}`;
-          return chaveExistente === chave;
+        // Carregar dados na inicialização
+        $(document).ready(() => {
+            carregarDados();
         });
-
-        if (idx >= 0) {
-          // Já existe, atualiza
-          resultado[idx] = novoLic;
-        } else {
-          // Novo, adiciona
-          resultado.push(novoLic);
-        }
-      });
-
-      return deduplica(resultado);
-    }
-
-    async function carregarDadosPncp() {
-      const status = document.getElementById('status');
-      
-      // Tentar carregar do cache primeiro
-      const cacheLocal = obterCacheLocal();
-      if (cacheLocal && cacheLocal.length > 0) {
-        status.textContent = `✓ Cache carregado (${cacheLocal.length} licitações). Verificando atualizações...`;
-        status.className = 'status-success';
-        
-        dadosCompletos = cacheLocal;
-        dadosFiltrados = dadosCompletos.slice();
-        preencherFiltroUF();
-        paginaAtual = 1;
-        atualizarTabela();
-
-        // Atualizar em background
-        atualizarDadosEmBackground(cacheLocal);
-        return;
-      }
-
-      // Sem cache, carregar normalmente
-      status.textContent = 'Carregando dados do PNCP...';
-      status.className = 'status-loading';
-
-      try {
-        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const dados = await resp.json();
-        
-        // Deduplicar antes de salvar
-        dadosCompletos = deduplica(dados);
-        salvarCacheLocal(dadosCompletos);
-        
-        dadosFiltrados = dadosCompletos.slice();
-        preencherFiltroUF();
-        paginaAtual = 1;
-        atualizarTabela();
-        
-        status.textContent = `✓ Dados carregados com sucesso (${dadosCompletos.length} licitações).`;
-        status.className = 'status-success';
-      } catch (e) {
-        status.textContent = 'Erro ao carregar: ' + e.message;
-        status.className = 'status-error';
-      }
-    }
-
-    async function atualizarDadosEmBackground(cacheAntigo) {
-      try {
-        const resp = await fetch('dados_pncp.json?t=' + Date.now(), { cache: 'no-store' });
-        if (!resp.ok) return;
-        
-        const dadosNovos = await resp.json();
-        const mesclado = mesclaCacheComNovos(cacheAntigo, dadosNovos);
-        
-        if (mesclado.length > cacheAntigo.length) {
-          // Teve novos dados
-          dadosCompletos = mesclado;
-          salvarCacheLocal(mesclado);
-          
-          const status = document.getElementById('status');
-          status.textContent = `✓ Cache atualizado (+${mesclado.length - cacheAntigo.length} novos).`;
-          status.className = 'status-success';
-          
-          // Atualizar tabela se necessário
-          aplicarFiltros();
-        }
-      } catch (e) {
-        console.warn('Erro ao atualizar em background:', e);
-      }
-    }
-
-    // Botão para limpar cache manualmente
-    function adicionarBotaoLimparCache() {
-      const controlsGroup = document.createElement('div');
-      controlsGroup.className = 'controls-group';
-      
-      const btnLimpar = document.createElement('button');
-      btnLimpar.className = 'btn-secondary';
-      btnLimpar.textContent = '🔄 Atualizar Cache';
-      btnLimpar.style.fontSize = '0.75rem';
-      btnLimpar.addEventListener('click', () => {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        location.reload();
-      });
-      
-      controlsGroup.appendChild(btnLimpar);
-      document.querySelector('.controls').appendChild(controlsGroup);
-    }
-
-    function preencherFiltroUF() {
-      const selectUF = document.getElementById('filtro-uf');
-      const ufs = new Set();
-      dadosCompletos.forEach(lic => {
-        if (lic.uf) ufs.add(lic.uf);
-      });
-      const ordenadas = Array.from(ufs).sort();
-      selectUF.innerHTML = '<option value="">Todas</option>';
-      ordenadas.forEach(uf => {
-        const opt = document.createElement('option');
-        opt.value = uf;
-        opt.textContent = uf;
-        selectUF.appendChild(opt);
-      });
-    }
-
-    function aplicarFiltros() {
-      const termo = document.getElementById('busca').value.toLowerCase().trim();
-      const uf = document.getElementById('filtro-uf').value;
-
-      dadosFiltrados = dadosCompletos.filter(lic => {
-        let ok = true;
-
-        if (termo) {
-          const texto = [
-            lic.orgao_nome,
-            lic.numero_pregao,
-            lic.objeto,
-            lic.cidade,
-            lic.id_pncp,
-            ...(lic.itens || []).map(i => i.descricao + ' ' + i.fornecedor),
-            ...(lic.itens_todos_fornecedores || []).map(i => i.fornecedor)
-          ].join(' ').toLowerCase();
-          if (!texto.includes(termo)) ok = false;
-        }
-
-        if (uf && lic.uf !== uf) ok = false;
-
-        return ok;
-      });
-
-      paginaAtual = 1;
-      atualizarTabela();
-    }
-
-    function calcularTotalSeu(lic) {
-      if (!lic.itens) return 0;
-      return lic.itens.reduce((sum, item) => sum + (item.valor_total_item || 0), 0);
-    }
-
-    function atualizarTabela() {
-      const corpo = document.getElementById('corpo-tabela');
-      corpo.innerHTML = '';
-
-      const total = dadosFiltrados.length;
-      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
-      const fim = Math.min(inicio + ITENS_POR_PAGINA, total);
-      const paginaDados = dadosFiltrados.slice(inicio, fim);
-
-      paginaDados.forEach((lic, indexLocal) => {
-        const idxGlobal = inicio + indexLocal;
-        const tr = document.createElement('tr');
-
-        const qtdItens = lic.itens ? lic.itens.length : 0;
-        const totalSeu = calcularTotalSeu(lic);
-
-        tr.innerHTML = `
-          <td>
-            ${lic.orgao_codigo || ''}/${lic.uasg || ''}<br>
-            <small>${lic.orgao_nome || ''}</small>
-          </td>
-          <td>
-            ${lic.numero_pregao || ''}<br>
-            <a href="${lic.link_edital || '#'}" target="_blank" style="font-size: 0.75rem;">
-              ${lic.id_pncp || ''}
-            </a>
-          </td>
-          <td>${formatarData(lic.data_inicio_propostas)} a ${formatarData(lic.data_fim_propostas)}</td>
-          <td>${lic.cidade || ''} / ${lic.uf || ''}</td>
-          <td>${(lic.objeto || '').substring(0, 60)}${lic.objeto && lic.objeto.length > 60 ? '...' : ''}</td>
-          <td>${qtdItens}</td>
-          <td>${formatarMoeda(totalSeu)}</td>
-          <td>
-            <button type="button" data-idx="${idxGlobal}" class="btn-secondary btn-analise" style="padding: 4px 8px; font-size: 0.75rem;">
-              Analisar
-            </button>
-          </td>
-        `;
-        corpo.appendChild(tr);
-      });
-
-      document.getElementById('info-resultado').textContent =
-        `${total} licitação${total !== 1 ? 'es' : ''} (${inicio + 1}-${fim})`;
-
-      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
-      document.getElementById('page-info').textContent = `Página ${paginaAtual} de ${totalPaginas}`;
-      document.getElementById('prev-page').disabled = paginaAtual <= 1;
-      document.getElementById('next-page').disabled = paginaAtual >= totalPaginas;
-
-      document.querySelectorAll('.btn-analise').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.getAttribute('data-idx'), 10);
-          abrirModalAnalise(idx);
-        });
-      });
-    }
-
-    function abrirModalAnalise(idxGlobal) {
-      const lic = dadosFiltrados[idxGlobal];
-      if (!lic) return;
-
-      // Atualizar título
-      document.getElementById('modal-titulo').textContent =
-        `${lic.numero_pregao} – ${lic.orgao_nome}`;
-
-      // Atualizar link PNCP
-      document.getElementById('modal-link-pncp').href = lic.link_edital || '#';
-
-      // Resumo rápido
-      const totalSeu = calcularTotalSeu(lic);
-      const qtdSeus = lic.itens ? lic.itens.length : 0;
-      const qtdOutros = lic.itens_todos_fornecedores ? lic.itens_todos_fornecedores.length : 0;
-      const qtdFracasso = (lic.itens_todos_fornecedores || []).filter(i => i.situacao === 'SemResultado').length;
-
-      document.getElementById('resumo-total-seu').textContent = formatarMoeda(totalSeu);
-      document.getElementById('resumo-itens-seu').textContent = qtdSeus;
-      document.getElementById('resumo-itens-outros').textContent = qtdOutros;
-      document.getElementById('resumo-itens-fracasso').textContent = qtdFracasso;
-
-      // Seus itens
-      preencherTabelaSeuItens(lic);
-
-      // Todos fornecedores
-      preencherTabelaTodosFornecedores(lic);
-
-      // Fracassados
-      preencherTabelaFracassados(lic);
-
-      // Resumo por fornecedor
-      preencherResumoFornecedor(lic);
-
-      // Abrir modal
-      document.getElementById('modal-analise').classList.add('active');
-    }
-
-    function preencherTabelaSeuItens(lic) {
-      const corpo = document.getElementById('tab-seus-itens-corpo');
-      corpo.innerHTML = '';
-
-      if (!lic.itens || lic.itens.length === 0) {
-        corpo.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Nenhum item ganho</td></tr>';
-        return;
-      }
-
-      lic.itens.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.numero_item || ''}</td>
-          <td>${item.descricao || ''}</td>
-          <td>${item.quantidade || 0}</td>
-          <td>${formatarMoeda(item.valor_unitario)}</td>
-          <td><strong>${formatarMoeda(item.valor_total_item)}</strong></td>
-          <td>${formatarData(item.data_homologacao)}</td>
-        `;
-        corpo.appendChild(tr);
-      });
-    }
-
-    function preencherTabelaTodosFornecedores(lic) {
-      const corpo = document.getElementById('tab-todos-fornecedores-corpo');
-      corpo.innerHTML = '';
-
-      if (!lic.itens_todos_fornecedores || lic.itens_todos_fornecedores.length === 0) {
-        corpo.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">Sem dados</td></tr>';
-        return;
-      }
-
-      lic.itens_todos_fornecedores.forEach(item => {
-        const tr = document.createElement('tr');
-        const isVoce = (item.cnpj_fornecedor || '').includes('08778201000126') || 
-                       (item.cnpj_fornecedor || '').replace(/\D/g, '') === '08778201000126';
-        
-        let tagStatus = '';
-        if (item.situacao === 'Venceu') {
-          tagStatus = '<span class="tag tag-ok">Venceu</span>';
-        } else if (item.situacao === 'SemResultado') {
-          tagStatus = '<span class="tag tag-bad">Sem resultado</span>';
-        }
-
-        const destaque = isVoce ? 'style="background: #e0f2fe !important; font-weight: 600;"' : '';
-
-        tr.innerHTML = `
-          <td ${destaque}>${item.numero_item || ''}</td>
-          <td ${destaque}>${item.descricao || ''}</td>
-          <td ${destaque}>${item.fornecedor || 'Sem identificação'} ${isVoce ? '<span class="tag tag-ok">✓ Você</span>' : ''}</td>
-          <td ${destaque}>${item.cnpj_fornecedor || ''}</td>
-          <td ${destaque}>${item.quantidade || 0}</td>
-          <td ${destaque}>${formatarMoeda(item.valor_unitario)}</td>
-          <td ${destaque}>${formatarMoeda(item.valor_total_item)}</td>
-          <td ${destaque}>${formatarData(item.data_homologacao)}</td>
-          <td ${destaque}>${tagStatus}</td>
-        `;
-        corpo.appendChild(tr);
-      });
-    }
-
-    function preencherTabelaFracassados(lic) {
-      const corpo = document.getElementById('tab-fracassados-corpo');
-      corpo.innerHTML = '';
-
-      const fracassados = (lic.itens_todos_fornecedores || []).filter(i => i.situacao === 'SemResultado');
-
-      if (fracassados.length === 0) {
-        corpo.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Nenhum item fracassado</td></tr>';
-        return;
-      }
-
-      fracassados.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.numero_item || ''}</td>
-          <td>${item.descricao || ''}</td>
-          <td>${item.quantidade || 0}</td>
-          <td>${formatarMoeda(item.valor_unitario)}</td>
-          <td>${formatarMoeda(item.valor_total_item)}</td>
-          <td><span class="tag tag-bad">Sem resultado</span></td>
-        `;
-        corpo.appendChild(tr);
-      });
-    }
-
-    function preencherResumoFornecedor(lic) {
-      const corpo = document.getElementById('tab-resumo-fornecedor-corpo');
-      corpo.innerHTML = '';
-
-      const resumoMap = new Map();
-      
-      (lic.itens || []).forEach(item => {
-        const key = item.fornecedor + '||' + item.cnpj_fornecedor;
-        if (!resumoMap.has(key)) {
-          resumoMap.set(key, { nome: item.fornecedor, cnpj: item.cnpj_fornecedor, total: 0 });
-        }
-        resumoMap.get(key).total += item.valor_total_item || 0;
-      });
-
-      if (resumoMap.size === 0) {
-        corpo.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">Sem dados</td></tr>';
-        return;
-      }
-
-      Array.from(resumoMap.values())
-        .sort((a, b) => b.total - a.total)
-        .forEach(forn => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong>${forn.nome || 'Sem identificação'}</strong></td>
-            <td>${forn.cnpj || ''}</td>
-            <td style="text-align: right; font-weight: 600; color: var(--success);">
-              ${formatarMoeda(forn.total)}
-            </td>
-          `;
-          corpo.appendChild(tr);
-        });
-    }
-
-    function formatarData(iso) {
-      if (!iso) return '';
-      const d = new Date(iso);
-      if (isNaN(d)) return '';
-      return d.toLocaleDateString('pt-BR');
-    }
-
-    function formatarMoeda(v) {
-      if (v === null || v === undefined) return 'R$ 0,00';
-      const n = Number(v);
-      if (isNaN(n)) return 'R$ 0,00';
-      return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-
-    // Event listeners
-    document.getElementById('btn-aplicar').addEventListener('click', aplicarFiltros);
-    document.getElementById('btn-limpar').addEventListener('click', () => {
-      document.getElementById('busca').value = '';
-      document.getElementById('filtro-uf').value = '';
-      dadosFiltrados = dadosCompletos.slice();
-      paginaAtual = 1;
-      atualizarTabela();
-    });
-
-    document.getElementById('prev-page').addEventListener('click', () => {
-      if (paginaAtual > 1) {
-        paginaAtual--;
-        atualizarTabela();
-      }
-    });
-
-    document.getElementById('next-page').addEventListener('click', () => {
-      const total = dadosFiltrados.length;
-      const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
-      if (paginaAtual < totalPaginas) {
-        paginaAtual++;
-        atualizarTabela();
-      }
-    });
-
-    document.getElementById('modal-fechar').addEventListener('click', () => {
-      document.getElementById('modal-analise').classList.remove('active');
-    });
-
-    document.getElementById('modal-analise').addEventListener('click', (e) => {
-      if (e.target.id === 'modal-analise') {
-        document.getElementById('modal-analise').classList.remove('active');
-      }
-    });
-
-    // Abas do modal
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabName = btn.getAttribute('data-tab');
-        
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-        
-        btn.classList.add('active');
-        document.getElementById(tabName).classList.add('active');
-      });
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      adicionarBotaoLimparCache();
-      carregarDadosPncp();
-    });
-  </script>
+    </script>
 </body>
 </html>
