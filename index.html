@@ -13,9 +13,8 @@
         .card-dashboard { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
         .card-dashboard:hover { transform: translateY(-5px); }
         .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .status-dot { height: 10px; width: 10px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .filters-section { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .obj-trunc { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .obj-trunc { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
     </style>
 </head>
@@ -34,19 +33,19 @@
             <div class="col-md-4">
                 <div class="card card-dashboard bg-primary text-white p-3">
                     <h3><i class="fas fa-file-contract"></i> <span id="totalLicitacoes">0</span></h3>
-                    <p class="mb-0">Licitações Encontradas</p>
+                    <p class="mb-0">Licitações Listadas</p>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card card-dashboard bg-success text-white p-3">
                     <h3><i class="fas fa-money-bill-wave"></i> <span id="valorTotal">R$ 0,00</span></h3>
-                    <p class="mb-0">Valor Total Estimado (Itens)</p>
+                    <p class="mb-0">Valor Total Estimado</p>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card card-dashboard bg-info text-white p-3">
-                    <h3><i class="fas fa-map-marker-alt"></i> <span id="totalMunicipios">0</span></h3>
-                    <p class="mb-0">Municípios Diferentes</p>
+                    <h3><i class="fas fa-users"></i> <span id="totalFornecedores">0</span></h3>
+                    <p class="mb-0">Fornecedores Identificados</p>
                 </div>
             </div>
         </div>
@@ -54,17 +53,26 @@
         <div class="filters-section">
             <h5 class="mb-3"><i class="fas fa-filter"></i> Filtros</h5>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar por Órgão, Objeto ou Número do Pregão...">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Busca Textual</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Órgão, Objeto ou Número...">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small text-muted">Fornecedor</label>
+                    <select id="fornecedorFilter" class="form-select">
+                        <option value="">Todos os Fornecedores</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Estado (UF)</label>
                     <select id="ufFilter" class="form-select">
-                        <option value="">Todos os Estados (UF)</option>
+                        <option value="">Todas</option>
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small text-muted">Cidade</label>
                     <select id="cidadeFilter" class="form-select">
-                        <option value="">Todas as Cidades</option>
+                        <option value="">Todas</option>
                     </select>
                 </div>
             </div>
@@ -75,43 +83,43 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Data Resultado</th>
-                            <th>UF</th>
-                            <th>Cidade</th>
+                            <th>Data</th>
+                            <th>Local</th>
                             <th>Órgão / Número</th>
                             <th>Objeto</th>
                             <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><br>Carregando dados...</td></tr>
+                        <tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><br>Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p id="noResults" class="text-center text-muted mt-3" style="display:none;">Nenhuma licitação encontrada com os filtros atuais.</p>
+            <p id="noResults" class="text-center text-muted mt-3" style="display:none;">Nenhum registro encontrado.</p>
         </div>
     </div>
 
     <div class="modal fade" id="detailsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Detalhes da Licitação</h5>
+                    <h5 class="modal-title"><i class="fas fa-info-circle"></i> Detalhes da Licitação</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="modalContent"></div>
-                    <hr>
-                    <h5>Itens da Licitação</h5>
+                    <div id="modalContent" class="alert alert-light border"></div>
+                    
+                    <h5 class="mt-4">Itens e Vencedores</h5>
                     <div class="table-responsive">
-                        <table class="table table-sm table-bordered">
-                            <thead>
+                        <table class="table table-striped table-bordered table-sm align-middle">
+                            <thead class="table-dark">
                                 <tr>
-                                    <th>#</th>
-                                    <th>Descrição</th>
-                                    <th>Qtd</th>
-                                    <th>Val. Unit.</th>
-                                    <th>Total</th>
+                                    <th style="width: 5%">#</th>
+                                    <th style="width: 35%">Descrição do Item</th>
+                                    <th style="width: 25%">Fornecedor Vencedor</th>
+                                    <th style="width: 10%" class="text-center">Qtd</th>
+                                    <th style="width: 12%" class="text-end">Val. Unit.</th>
+                                    <th style="width: 13%" class="text-end">Total</th>
                                 </tr>
                             </thead>
                             <tbody id="modalItemsBody"></tbody>
@@ -119,7 +127,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <a href="#" id="modalLinkEdital" target="_blank" class="btn btn-primary">Ver Edital no PNCP</a>
+                    <a href="#" id="modalLinkEdital" target="_blank" class="btn btn-primary"><i class="fas fa-external-link-alt"></i> Ver Edital no PNCP</a>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
@@ -128,58 +136,67 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Configuração
         const JSON_URL = 'dados_pncp.json';
         let rawData = [];
 
-        // Inicialização
         document.addEventListener('DOMContentLoaded', () => {
             fetchData();
             
-            // Event Listeners para filtros
-            document.getElementById('searchInput').addEventListener('input', applyFilters);
-            document.getElementById('ufFilter').addEventListener('change', applyFilters);
-            document.getElementById('cidadeFilter').addEventListener('change', applyFilters);
+            // Listeners
+            ['searchInput', 'ufFilter', 'cidadeFilter', 'fornecedorFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyFilters);
+                document.getElementById(id).addEventListener('change', applyFilters);
+            });
         });
 
         async function fetchData() {
             try {
                 const response = await fetch(JSON_URL);
-                if (!response.ok) throw new Error("Erro ao carregar arquivo JSON");
-                
+                if (!response.ok) throw new Error("Erro HTTP " + response.status);
                 rawData = await response.json();
                 
-                // Popula filtros iniciais
                 populateSelects(rawData);
-                
-                // Renderiza tabela inicial
                 renderTable(rawData);
                 updateDashboard(rawData);
-
             } catch (error) {
-                document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro: ${error.message}. Verifique se o arquivo dados_pncp.json existe.</td></tr>`;
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro: ${error.message} - Verifique o arquivo JSON.</td></tr>`;
             }
         }
 
         function populateSelects(data) {
-            const ufs = [...new Set(data.map(item => item.uf).filter(Boolean))].sort();
-            const cidades = [...new Set(data.map(item => item.cidade).filter(Boolean))].sort();
+            const ufs = new Set();
+            const cidades = new Set();
+            const fornecedores = new Set();
 
-            const ufSelect = document.getElementById('ufFilter');
-            const cidadeSelect = document.getElementById('cidadeFilter');
-
-            ufs.forEach(uf => {
-                const option = document.createElement('option');
-                option.value = uf;
-                option.textContent = uf;
-                ufSelect.appendChild(option);
+            data.forEach(item => {
+                if(item.uf) ufs.add(item.uf);
+                if(item.cidade) cidades.add(item.cidade);
+                
+                // Coleta fornecedores do resumo ou dos itens
+                if (item.resumo_fornecedores) {
+                    Object.keys(item.resumo_fornecedores).forEach(f => fornecedores.add(f));
+                }
+                
+                // Backup: procura nos itens caso resumo esteja vazio
+                const itens = item.itens_todos_fornecedores || item.itens || [];
+                itens.forEach(i => {
+                    const forn = i.nome_fornecedor || i.nomeRazaoSocialFornecedor;
+                    if(forn) fornecedores.add(forn);
+                });
             });
 
-            cidades.forEach(cidade => {
-                const option = document.createElement('option');
-                option.value = cidade;
-                option.textContent = cidade;
-                cidadeSelect.appendChild(option);
+            fillSelect('ufFilter', [...ufs].sort());
+            fillSelect('cidadeFilter', [...cidades].sort());
+            fillSelect('fornecedorFilter', [...fornecedores].sort());
+        }
+
+        function fillSelect(id, list) {
+            const select = document.getElementById(id);
+            list.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                select.appendChild(opt);
             });
         }
 
@@ -187,15 +204,33 @@
             const termo = document.getElementById('searchInput').value.toLowerCase();
             const uf = document.getElementById('ufFilter').value;
             const cidade = document.getElementById('cidadeFilter').value;
+            const fornecedor = document.getElementById('fornecedorFilter').value;
 
             const filtered = rawData.filter(item => {
+                // Filtro Texto
                 const matchTexto = (item.objeto || '').toLowerCase().includes(termo) || 
                                    (item.orgao_nome || '').toLowerCase().includes(termo) ||
                                    (item.numero_pregao || '').toLowerCase().includes(termo);
+                
+                // Filtros Básicos
                 const matchUf = uf ? item.uf === uf : true;
                 const matchCidade = cidade ? item.cidade === cidade : true;
 
-                return matchTexto && matchUf && matchCidade;
+                // Filtro Fornecedor (complexo: verifica resumo ou itens)
+                let matchForn = true;
+                if (fornecedor) {
+                    const hasInResumo = item.resumo_fornecedores && item.resumo_fornecedores.hasOwnProperty(fornecedor);
+                    
+                    const itens = item.itens_todos_fornecedores || item.itens || [];
+                    const hasInItems = itens.some(i => {
+                        const nome = i.nome_fornecedor || i.nomeRazaoSocialFornecedor || '';
+                        return nome === fornecedor;
+                    });
+                    
+                    matchForn = hasInResumo || hasInItems;
+                }
+
+                return matchTexto && matchUf && matchCidade && matchForn;
             });
 
             renderTable(filtered);
@@ -209,93 +244,82 @@
             if (data.length === 0) {
                 document.getElementById('noResults').style.display = 'block';
                 return;
-            } else {
-                document.getElementById('noResults').style.display = 'none';
             }
+            document.getElementById('noResults').style.display = 'none';
 
-            data.forEach((item, index) => {
-                const tr = document.createElement('tr');
+            data.forEach((item, index) => { // Nota: index aqui é relativo ao array filtrado.
+                // Truque para manter referência ao objeto original no Modal:
+                // Vamos passar o objeto stringificado no botão (ou usar ID se houvesse ID único garantido)
+                // Para simplificar, vamos salvar o array filtrado globalmente ou buscar pelo item.
+                // Abordagem atual: Attach data no elemento.
                 
-                // Formatação de Data
-                const dataFormatada = item.data_resultado ? new Date(item.data_resultado).toLocaleDateString('pt-BR') : '-';
+                const tr = document.createElement('tr');
+                const dataF = item.data_resultado ? new Date(item.data_resultado).toLocaleDateString('pt-BR') : '-';
                 
                 tr.innerHTML = `
-                    <td><small class="fw-bold">${dataFormatada}</small></td>
-                    <td><span class="badge bg-secondary">${item.uf || 'N/A'}</span></td>
-                    <td>${item.cidade || 'N/A'}</td>
+                    <td><small class="fw-bold">${dataF}</small></td>
                     <td>
-                        <div class="fw-bold small">${item.orgao_nome}</div>
+                        <div class="fw-bold text-secondary">${item.uf || ''}</div>
+                        <small>${item.cidade || ''}</small>
+                    </td>
+                    <td>
+                        <div class="fw-bold small text-primary">${item.orgao_nome}</div>
                         <small class="text-muted">Pregão: ${item.numero_pregao}</small>
                     </td>
                     <td class="obj-trunc" title="${item.objeto}">${item.objeto}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary" onclick="openModal(${index})">
+                        <button class="btn btn-sm btn-outline-primary action-btn">
                             <i class="fas fa-eye"></i> Ver Itens
                         </button>
                     </td>
                 `;
+                
+                // Listener direto no botão para evitar problemas de índice
+                tr.querySelector('.action-btn').addEventListener('click', () => openModal(item));
                 tbody.appendChild(tr);
             });
         }
 
         function updateDashboard(data) {
-            // Contagens
             document.getElementById('totalLicitacoes').innerText = data.length;
             
-            const uniqueCities = new Set(data.map(i => i.cidade));
-            document.getElementById('totalMunicipios').innerText = uniqueCities.size;
-
-            // Soma valores dos itens (se existirem)
+            // Total Fornecedores (baseado no filtro atual)
+            const forns = new Set();
             let totalVal = 0;
+
             data.forEach(lic => {
-                // Tenta pegar itens_todos_fornecedores ou itens
+                if(lic.resumo_fornecedores) {
+                    Object.keys(lic.resumo_fornecedores).forEach(k => forns.add(k));
+                }
+                
                 const itens = lic.itens_todos_fornecedores || lic.itens || [];
                 itens.forEach(i => {
-                    // Tenta pegar valor_total ou calcular
-                    const val = i.valor_total_item || (i.valor_unitario * i.quantidade) || 0;
-                    totalVal += parseFloat(val);
+                    const v = i.valor_total_item || (i.valor_unitario * i.quantidade) || 0;
+                    totalVal += parseFloat(v);
                 });
             });
-
+            
+            document.getElementById('totalFornecedores').innerText = forns.size;
             document.getElementById('valorTotal').innerText = totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Função Global para abrir Modal (precisa estar no window scope)
-        window.openModal = function(index) {
-            // Como filtered muda o índice, precisamos achar o item no rawData ou salvar o objeto no botão. 
-            // Maneira simplificada: pegar do contexto atual filtrado é arriscado se não recriar indices.
-            // Solução robusta: buscar pelo ID ou passar o objeto stringificado (não recomendado)
-            // Solução Rápida: usar o objeto atual renderizado.
-            // Vamos apenas recalcular o filtered array dentro do escopo ou buscar no array filtrado atual se fosse global.
-            
-            // Ajuste para pegar o item correto baseado na filtragem atual:
-            const termo = document.getElementById('searchInput').value.toLowerCase();
-            const uf = document.getElementById('ufFilter').value;
-            const cidade = document.getElementById('cidadeFilter').value;
-            
-            const currentData = rawData.filter(item => {
-                const matchTexto = (item.objeto || '').toLowerCase().includes(termo) || 
-                                   (item.orgao_nome || '').toLowerCase().includes(termo) ||
-                                   (item.numero_pregao || '').toLowerCase().includes(termo);
-                const matchUf = uf ? item.uf === uf : true;
-                const matchCidade = cidade ? item.cidade === cidade : true;
-                return matchTexto && matchUf && matchCidade;
-            });
-
-            const item = currentData[index];
-            if(!item) return;
-
-            // Preencher Modal
+        function openModal(item) {
             const modalContent = document.getElementById('modalContent');
             modalContent.innerHTML = `
-                <p><strong>Órgão:</strong> ${item.orgao_nome}</p>
-                <p><strong>Objeto:</strong> ${item.objeto}</p>
-                <p><strong>UASG:</strong> ${item.uasg || '-'} | <strong>Pregão:</strong> ${item.numero_pregao}</p>
+                <div class="row">
+                    <div class="col-md-8">
+                        <strong>Órgão:</strong> ${item.orgao_nome}<br>
+                        <strong>Objeto:</strong> ${item.objeto}
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <small>UASG: ${item.uasg || '-'} | Pregão: ${item.numero_pregao}</small><br>
+                        <span class="badge bg-success">${item.uf} - ${item.cidade}</span>
+                    </div>
+                </div>
             `;
 
             document.getElementById('modalLinkEdital').href = item.link_edital || '#';
 
-            // Itens
             const tbodyItems = document.getElementById('modalItemsBody');
             tbodyItems.innerHTML = '';
             
@@ -304,20 +328,24 @@
                                : (item.itens || []);
 
             if (listaItens.length === 0) {
-                tbodyItems.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum detalhe de item disponível no JSON.</td></tr>';
+                tbodyItems.innerHTML = '<tr><td colspan="6" class="text-center">Sem dados de itens.</td></tr>';
             } else {
                 listaItens.forEach(prod => {
                     const valUnit = parseFloat(prod.valor_unitario || 0);
                     const qtd = parseFloat(prod.quantidade || 0);
                     const total = prod.valor_total_item || (valUnit * qtd);
                     
+                    // Tenta achar o nome do fornecedor em várias chaves possíveis
+                    const fornecedorNome = prod.nome_fornecedor || prod.nomeRazaoSocialFornecedor || prod.razao_social || '<span class="text-muted fst-italic">Não informado</span>';
+
                     const row = `
                         <tr>
                             <td>${prod.numero_item}</td>
                             <td>${prod.descricao}</td>
-                            <td>${qtd}</td>
-                            <td>${valUnit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                            <td><strong>${total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</strong></td>
+                            <td class="text-primary fw-bold small">${fornecedorNome}</td>
+                            <td class="text-center">${qtd}</td>
+                            <td class="text-end">${valUnit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                            <td class="text-end fw-bold">${total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                         </tr>
                     `;
                     tbodyItems.innerHTML += row;
@@ -326,7 +354,7 @@
 
             const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
             modal.show();
-        };
+        }
     </script>
 </body>
 </html>
