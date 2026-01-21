@@ -3,536 +3,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard PNCP - Licitações Públicas</title>
+    <title>Monitoramento de Pregões - PNCP</title>
     
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px 0;
-        }
-
-        .container-custom {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 15px;
-        }
-
-        /* Header */
-        .header {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .header h1 i {
-            color: #667eea;
-        }
-
-        .header p {
-            color: #666;
-            margin: 0;
-            font-size: 0.95rem;
-        }
-
-        /* Cards de Estatísticas */
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border-left: 5px solid #667eea;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .stat-card h3 {
-            color: #999;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .stat-card .value {
-            color: #333;
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        /* Alertas */
-        .alert {
-            border-radius: 8px;
-            border: none;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-        }
-
-        /* Filtros */
-        .filters-section {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .filters-section h4 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-
-        .form-select,
-        .form-control {
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-
-        .form-select:focus,
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        /* Tabela */
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow-x: auto;
-            margin-bottom: 30px;
-        }
-
-        .table-container h4 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-            color: #333;
-            font-weight: 700;
-            padding: 15px;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .api-config {
-            background: #e7f3ff;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        .api-config strong {
-            color: #1976d2;
-        }
-
-        code {
-            background: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #667eea;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .loading-overlay.show {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        @media (max-width: 768px) {
-            .stats-cards {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
+        body { background-color: #f4f6f9; }
+        .card-dashboard { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card-dashboard:hover { transform: translateY(-5px); }
+        .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .status-dot { height: 10px; width: 10px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .filters-section { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .obj-trunc { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner-border text-light" role="status">
-            <span class="visually-hidden">Carregando...</span>
-        </div>
-    </div>
 
-    <div class="container-custom">
-        <!-- Header -->
-        <div class="header">
-            <h1><i class="fas fa-gavel"></i> Dashboard PNCP</h1>
-            <p>Análise de Licitações Públicas em Tempo Real</p>
+    <header class="text-center">
+        <div class="container">
+            <h1><i class="fas fa-gavel"></i> Monitoramento de Licitações</h1>
+            <p class="lead">Painel de visualização de dados do PNCP</p>
         </div>
+    </header>
 
-        <!-- Alertas -->
-        <div id="alertas-container"></div>
+    <div class="container mb-5">
         
-        <div class="api-config">
-            <strong>✅ DADOS REAIS DO PNCP</strong>
-            <div style="font-size: 0.85rem; margin-top: 8px;">
-                <div>📁 Fonte: <code>dados_pncp.json</code> (gerado por coleta_pncp.py)</div>
-                <div id="data-status" style="margin-top: 5px; color: #1976d2;">Carregando...</div>
+        <div class="row mb-4" id="summaryCards">
+            <div class="col-md-4">
+                <div class="card card-dashboard bg-primary text-white p-3">
+                    <h3><i class="fas fa-file-contract"></i> <span id="totalLicitacoes">0</span></h3>
+                    <p class="mb-0">Licitações Encontradas</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-dashboard bg-success text-white p-3">
+                    <h3><i class="fas fa-money-bill-wave"></i> <span id="valorTotal">R$ 0,00</span></h3>
+                    <p class="mb-0">Valor Total Estimado (Itens)</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-dashboard bg-info text-white p-3">
+                    <h3><i class="fas fa-map-marker-alt"></i> <span id="totalMunicipios">0</span></h3>
+                    <p class="mb-0">Municípios Diferentes</p>
+                </div>
             </div>
         </div>
 
-        <!-- Cards de Estatísticas -->
-        <div class="stats-cards">
-            <div class="stat-card">
-                <h3><i class="fas fa-file-contract"></i> Licitações</h3>
-                <div class="value" id="total-lic">-</div>
-            </div>
-            <div class="stat-card">
-                <h3><i class="fas fa-money-bill-wave"></i> Valor Total</h3>
-                <div class="value" id="total-val">-</div>
-            </div>
-            <div class="stat-card">
-                <h3><i class="fas fa-cubes"></i> Itens</h3>
-                <div class="value" id="total-itens">-</div>
-            </div>
-            <div class="stat-card">
-                <h3><i class="fas fa-map-marker-alt"></i> Municípios</h3>
-                <div class="value" id="total-mun">-</div>
+        <div class="filters-section">
+            <h5 class="mb-3"><i class="fas fa-filter"></i> Filtros</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar por Órgão, Objeto ou Número do Pregão...">
+                </div>
+                <div class="col-md-3">
+                    <select id="ufFilter" class="form-select">
+                        <option value="">Todos os Estados (UF)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="cidadeFilter" class="form-select">
+                        <option value="">Todas as Cidades</option>
+                    </select>
+                </div>
             </div>
         </div>
 
-        <!-- Tabela com Paginação -->
         <div class="table-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h4 style="margin: 0;"><i class="fas fa-table"></i> Licitações Públicas</h4>
-                <small id="info-paginacao" style="color: #666;">Carregando...</small>
-            </div>
-            
             <div class="table-responsive">
-                <table id="tabela-licitacoes" class="table">
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <th>Data</th>
-                            <th>Órgão</th>
-                            <th>Pregão</th>
-                            <th>Município</th>
-                            <th>Fornecedor</th>
-                            <th>Valor</th>
+                            <th>Data Resultado</th>
+                            <th>UF</th>
+                            <th>Cidade</th>
+                            <th>Órgão / Número</th>
+                            <th>Objeto</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="corpo-tabela">
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>
-                                Carregando...
-                            </td>
-                        </tr>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><br>Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
+            <p id="noResults" class="text-center text-muted mt-3" style="display:none;">Nenhuma licitação encontrada com os filtros atuais.</p>
+        </div>
+    </div>
 
-            <!-- Controle de Paginação -->
-            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; align-items: center;">
-                <button id="btn-anterior" class="btn btn-secondary btn-sm" style="padding: 6px 12px;">← Anterior</button>
-                <span id="pagina-info" style="font-weight: 600; color: #333; min-width: 100px; text-align: center;">Página 1</span>
-                <button id="btn-proximo" class="btn btn-secondary btn-sm" style="padding: 6px 12px;">Próximo →</button>
-                <input type="number" id="input-pagina" class="form-control" style="width: 80px; padding: 6px;" placeholder="Ir para" min="1">
-                <button id="btn-ir-pagina" class="btn btn-primary btn-sm" style="padding: 6px 12px;">Ir</button>
+    <div class="modal fade" id="detailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalhes da Licitação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalContent"></div>
+                    <hr>
+                    <h5>Itens da Licitação</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Descrição</th>
+                                    <th>Qtd</th>
+                                    <th>Val. Unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalItemsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="modalLinkEdital" target="_blank" class="btn btn-primary">Ver Edital no PNCP</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        // ==================== CONFIGURAÇÃO ====================
-        const CONFIG = {
-            DADOS_LOCAL: 'dados_pncp.json',
-            TIMEOUT: 10000,
-            ITENS_POR_PAGINA: 20,  // ✅ Paginação - reduz renderização
-            AUTO_REFRESH: 300000   // ✅ Auto-refresh a cada 5 minutos (em vez de 1)
-        };
+        // Configuração
+        const JSON_URL = 'dados_pncp.json';
+        let rawData = [];
 
-        let dadosOriginais = [];
-        let paginaAtual = 1;
-        let dadosFiltrados = [];
-
-        // ==================== FUNÇÕES UTILITÁRIAS ====================
-
-        function mostrarLoading(mostrar = true) {
-            const overlay = document.getElementById('loadingOverlay');
-            if (mostrar) {
-                overlay.classList.add('show');
-            } else {
-                overlay.classList.remove('show');
-            }
-        }
-
-        function exibirAlerta(tipo, titulo, mensagem) {
-            const container = document.getElementById('alertas-container');
-            const alertId = 'alert-' + Date.now();
-            const alertHtml = `
-                <div id="${alertId}" class="alert alert-${tipo} alert-dismissible fade show" role="alert">
-                    <strong>${titulo}:</strong> ${mensagem}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', alertHtml);
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
             
-            setTimeout(() => {
-                const elem = document.getElementById(alertId);
-                if (elem) elem.remove();
-            }, 5000);
-        }
+            // Event Listeners para filtros
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('ufFilter').addEventListener('change', applyFilters);
+            document.getElementById('cidadeFilter').addEventListener('change', applyFilters);
+        });
 
-        function formatarData(data) {
-            if (!data) return 'N/D';
+        async function fetchData() {
             try {
-                const d = new Date(data);
-                return d.toLocaleDateString('pt-BR');
-            } catch {
-                return data;
+                const response = await fetch(JSON_URL);
+                if (!response.ok) throw new Error("Erro ao carregar arquivo JSON");
+                
+                rawData = await response.json();
+                
+                // Popula filtros iniciais
+                populateSelects(rawData);
+                
+                // Renderiza tabela inicial
+                renderTable(rawData);
+                updateDashboard(rawData);
+
+            } catch (error) {
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro: ${error.message}. Verifique se o arquivo dados_pncp.json existe.</td></tr>`;
             }
         }
 
-        function formatarMoeda(valor) {
-            if (!valor) return 'R$ 0,00';
-            return parseFloat(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
+        function populateSelects(data) {
+            const ufs = [...new Set(data.map(item => item.uf).filter(Boolean))].sort();
+            const cidades = [...new Set(data.map(item => item.cidade).filter(Boolean))].sort();
+
+            const ufSelect = document.getElementById('ufFilter');
+            const cidadeSelect = document.getElementById('cidadeFilter');
+
+            ufs.forEach(uf => {
+                const option = document.createElement('option');
+                option.value = uf;
+                option.textContent = uf;
+                ufSelect.appendChild(option);
+            });
+
+            cidades.forEach(cidade => {
+                const option = document.createElement('option');
+                option.value = cidade;
+                option.textContent = cidade;
+                cidadeSelect.appendChild(option);
             });
         }
 
-        // ==================== CARREGAMENTO DOS DADOS ====================
+        function applyFilters() {
+            const termo = document.getElementById('searchInput').value.toLowerCase();
+            const uf = document.getElementById('ufFilter').value;
+            const cidade = document.getElementById('cidadeFilter').value;
 
-        async function carregarDados() {
-            mostrarLoading(true);
+            const filtered = rawData.filter(item => {
+                const matchTexto = (item.objeto || '').toLowerCase().includes(termo) || 
+                                   (item.orgao_nome || '').toLowerCase().includes(termo) ||
+                                   (item.numero_pregao || '').toLowerCase().includes(termo);
+                const matchUf = uf ? item.uf === uf : true;
+                const matchCidade = cidade ? item.cidade === cidade : true;
 
-            try {
-                console.log('📁 Carregando dados de: ' + CONFIG.DADOS_LOCAL);
-                
-                const response = await fetch(CONFIG.DADOS_LOCAL + '?t=' + Date.now(), {
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Arquivo ' + CONFIG.DADOS_LOCAL + ' não encontrado!');
-                }
-                
-                const dados = await response.json();
-                
-                if (!Array.isArray(dados)) {
-                    throw new Error('Dados não estão em formato de array');
-                }
+                return matchTexto && matchUf && matchCidade;
+            });
 
-                console.log('✅ ' + dados.length + ' registros carregados com sucesso!');
-                exibirAlerta('success', 'Sucesso', 'Carregados ' + dados.length + ' registros de ' + CONFIG.DADOS_LOCAL);
-                
-                dadosOriginais = dados;
-                atualizarTabela(dados);
-                atualizarCards(dados);
-                
-                document.getElementById('data-status').textContent = 
-                    '✅ ' + dados.length + ' registros carregados com sucesso';
-
-            } catch (erro) {
-                console.error('❌ Erro:', erro);
-                exibirAlerta('danger', 'Erro', erro.message + ' - Verifique se o arquivo ' + CONFIG.DADOS_LOCAL + ' existe.');
-                document.getElementById('data-status').textContent = '❌ Erro ao carregar dados: ' + erro.message;
-            } finally {
-                mostrarLoading(false);
-            }
+            renderTable(filtered);
+            updateDashboard(filtered);
         }
 
-        // ==================== ATUALIZAR TABELA COM PAGINAÇÃO ====================
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
 
-        function atualizarTabela(dados, pagina = 1) {
-            const tbody = document.getElementById('corpo-tabela');
-            
-            if (!dados || dados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Sem dados para exibir</td></tr>';
-                document.getElementById('info-paginacao').textContent = 'Nenhum registro';
+            if (data.length === 0) {
+                document.getElementById('noResults').style.display = 'block';
                 return;
-            }
-
-            dadosFiltrados = dados;
-            paginaAtual = pagina;
-
-            const inicio = (pagina - 1) * CONFIG.ITENS_POR_PAGINA;
-            const fim = inicio + CONFIG.ITENS_POR_PAGINA;
-            const dadosPagina = dados.slice(inicio, fim);
-            const totalPaginas = Math.ceil(dados.length / CONFIG.ITENS_POR_PAGINA);
-
-            tbody.innerHTML = dadosPagina.map(lic => `
-                <tr>
-                    <td>${formatarData(lic.DataResult)}</td>
-                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${lic.Orgao || 'N/D'}</td>
-                    <td>${lic.NumEdital || 'N/D'}</td>
-                    <td>${lic.Municipio || 'N/D'}</td>
-                    <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis;">${lic.Fornecedor || 'N/D'}</td>
-                    <td>${formatarMoeda(lic.ValorTotal || 0)}</td>
-                </tr>
-            `).join('');
-
-            document.getElementById('pagina-info').textContent = `Página ${pagina} de ${totalPaginas}`;
-            document.getElementById('info-paginacao').textContent = `${dados.length} registros | ${totalPaginas} página(s)`;
-            document.getElementById('btn-anterior').disabled = pagina === 1;
-            document.getElementById('btn-proximo').disabled = pagina === totalPaginas;
-            document.getElementById('input-pagina').max = totalPaginas;
-        }
-
-        // ==================== ATUALIZAR CARDS ====================
-
-        function atualizarCards(dados) {
-            if (!dados || dados.length === 0) {
-                document.getElementById('total-lic').textContent = '0';
-                document.getElementById('total-val').textContent = 'R$ 0,00';
-                document.getElementById('total-itens').textContent = '0';
-                document.getElementById('total-mun').textContent = '0';
-                return;
-            }
-
-            const totalLicitacoes = dados.length;
-            const totalValor = dados.reduce((sum, lic) => sum + (parseFloat(lic.ValorTotal) || 0), 0);
-            const totalItens = dados.reduce((sum, lic) => sum + (lic.Itens ? lic.Itens.length : 0), 0);
-            const municipios = new Set(dados.map(lic => lic.Municipio).filter(m => m));
-
-            document.getElementById('total-lic').textContent = totalLicitacoes;
-            document.getElementById('total-val').textContent = formatarMoeda(totalValor);
-            document.getElementById('total-itens').textContent = totalItens;
-            document.getElementById('total-mun').textContent = municipios.size;
-        }
-
-        // ==================== CONTROLE DE PAGINAÇÃO ====================
-
-        document.getElementById('btn-anterior').addEventListener('click', () => {
-            if (paginaAtual > 1) atualizarTabela(dadosFiltrados, paginaAtual - 1);
-        });
-
-        document.getElementById('btn-proximo').addEventListener('click', () => {
-            const totalPaginas = Math.ceil(dadosFiltrados.length / CONFIG.ITENS_POR_PAGINA);
-            if (paginaAtual < totalPaginas) atualizarTabela(dadosFiltrados, paginaAtual + 1);
-        });
-
-        document.getElementById('btn-ir-pagina').addEventListener('click', () => {
-            const pagina = parseInt(document.getElementById('input-pagina').value);
-            const totalPaginas = Math.ceil(dadosFiltrados.length / CONFIG.ITENS_POR_PAGINA);
-            if (pagina > 0 && pagina <= totalPaginas) {
-                atualizarTabela(dadosFiltrados, pagina);
-                document.getElementById('input-pagina').value = '';
             } else {
-                alert('Número de página inválido!');
+                document.getElementById('noResults').style.display = 'none';
             }
-        });
 
-        // ==================== INICIAR ====================
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                
+                // Formatação de Data
+                const dataFormatada = item.data_resultado ? new Date(item.data_resultado).toLocaleDateString('pt-BR') : '-';
+                
+                tr.innerHTML = `
+                    <td><small class="fw-bold">${dataFormatada}</small></td>
+                    <td><span class="badge bg-secondary">${item.uf || 'N/A'}</span></td>
+                    <td>${item.cidade || 'N/A'}</td>
+                    <td>
+                        <div class="fw-bold small">${item.orgao_nome}</div>
+                        <small class="text-muted">Pregão: ${item.numero_pregao}</small>
+                    </td>
+                    <td class="obj-trunc" title="${item.objeto}">${item.objeto}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" onclick="openModal(${index})">
+                            <i class="fas fa-eye"></i> Ver Itens
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Dashboard PNCP Otimizado iniciando...');
-            carregarDados();
-        });
+        function updateDashboard(data) {
+            // Contagens
+            document.getElementById('totalLicitacoes').innerText = data.length;
+            
+            const uniqueCities = new Set(data.map(i => i.cidade));
+            document.getElementById('totalMunicipios').innerText = uniqueCities.size;
+
+            // Soma valores dos itens (se existirem)
+            let totalVal = 0;
+            data.forEach(lic => {
+                // Tenta pegar itens_todos_fornecedores ou itens
+                const itens = lic.itens_todos_fornecedores || lic.itens || [];
+                itens.forEach(i => {
+                    // Tenta pegar valor_total ou calcular
+                    const val = i.valor_total_item || (i.valor_unitario * i.quantidade) || 0;
+                    totalVal += parseFloat(val);
+                });
+            });
+
+            document.getElementById('valorTotal').innerText = totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Função Global para abrir Modal (precisa estar no window scope)
+        window.openModal = function(index) {
+            // Como filtered muda o índice, precisamos achar o item no rawData ou salvar o objeto no botão. 
+            // Maneira simplificada: pegar do contexto atual filtrado é arriscado se não recriar indices.
+            // Solução robusta: buscar pelo ID ou passar o objeto stringificado (não recomendado)
+            // Solução Rápida: usar o objeto atual renderizado.
+            // Vamos apenas recalcular o filtered array dentro do escopo ou buscar no array filtrado atual se fosse global.
+            
+            // Ajuste para pegar o item correto baseado na filtragem atual:
+            const termo = document.getElementById('searchInput').value.toLowerCase();
+            const uf = document.getElementById('ufFilter').value;
+            const cidade = document.getElementById('cidadeFilter').value;
+            
+            const currentData = rawData.filter(item => {
+                const matchTexto = (item.objeto || '').toLowerCase().includes(termo) || 
+                                   (item.orgao_nome || '').toLowerCase().includes(termo) ||
+                                   (item.numero_pregao || '').toLowerCase().includes(termo);
+                const matchUf = uf ? item.uf === uf : true;
+                const matchCidade = cidade ? item.cidade === cidade : true;
+                return matchTexto && matchUf && matchCidade;
+            });
+
+            const item = currentData[index];
+            if(!item) return;
+
+            // Preencher Modal
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <p><strong>Órgão:</strong> ${item.orgao_nome}</p>
+                <p><strong>Objeto:</strong> ${item.objeto}</p>
+                <p><strong>UASG:</strong> ${item.uasg || '-'} | <strong>Pregão:</strong> ${item.numero_pregao}</p>
+            `;
+
+            document.getElementById('modalLinkEdital').href = item.link_edital || '#';
+
+            // Itens
+            const tbodyItems = document.getElementById('modalItemsBody');
+            tbodyItems.innerHTML = '';
+            
+            const listaItens = item.itens_todos_fornecedores && item.itens_todos_fornecedores.length > 0 
+                               ? item.itens_todos_fornecedores 
+                               : (item.itens || []);
+
+            if (listaItens.length === 0) {
+                tbodyItems.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum detalhe de item disponível no JSON.</td></tr>';
+            } else {
+                listaItens.forEach(prod => {
+                    const valUnit = parseFloat(prod.valor_unitario || 0);
+                    const qtd = parseFloat(prod.quantidade || 0);
+                    const total = prod.valor_total_item || (valUnit * qtd);
+                    
+                    const row = `
+                        <tr>
+                            <td>${prod.numero_item}</td>
+                            <td>${prod.descricao}</td>
+                            <td>${qtd}</td>
+                            <td>${valUnit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                            <td><strong>${total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</strong></td>
+                        </tr>
+                    `;
+                    tbodyItems.innerHTML += row;
+                });
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            modal.show();
+        };
     </script>
 </body>
 </html>
