@@ -16,6 +16,11 @@
         .filters-section { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .obj-trunc { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
+        
+        /* Estilos do Modal */
+        .group-header { background-color: #e7f1ff !important; color: #004085; font-weight: bold; }
+        .group-header-fail { background-color: #ffebe9 !important; color: #8a1f1d; font-weight: bold; }
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -95,6 +100,17 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="pagination-container" id="paginationControls" style="display:none;">
+                <button class="btn btn-outline-secondary btn-sm" id="prevPage" onclick="changePage(-1)">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+                <span class="text-muted small" id="pageInfo">Página 1 de 1</span>
+                <button class="btn btn-outline-secondary btn-sm" id="nextPage" onclick="changePage(1)">
+                    Próximo <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
             <p id="noResults" class="text-center text-muted mt-3" style="display:none;">Nenhum registro encontrado.</p>
         </div>
     </div>
@@ -109,17 +125,16 @@
                 <div class="modal-body">
                     <div id="modalContent" class="alert alert-light border"></div>
                     
-                    <h5 class="mt-4">Itens e Vencedores</h5>
+                    <h5 class="mt-4">Itens Agrupados por Fornecedor</h5>
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-sm align-middle">
+                        <table class="table table-bordered table-sm align-middle">
                             <thead class="table-dark">
                                 <tr>
-                                    <th style="width: 5%">#</th>
-                                    <th style="width: 35%">Descrição do Item</th>
-                                    <th style="width: 25%">Fornecedor Vencedor</th>
+                                    <th style="width: 5%">Item</th>
+                                    <th style="width: 50%">Descrição</th>
                                     <th style="width: 10%" class="text-center">Qtd</th>
-                                    <th style="width: 12%" class="text-end">Val. Unit.</th>
-                                    <th style="width: 13%" class="text-end">Total</th>
+                                    <th style="width: 15%" class="text-end">Val. Unit.</th>
+                                    <th style="width: 20%" class="text-end">Total</th>
                                 </tr>
                             </thead>
                             <tbody id="modalItemsBody"></tbody>
@@ -138,6 +153,11 @@
     <script>
         const JSON_URL = 'dados_pncp.json';
         let rawData = [];
+        let filteredData = []; // Dados filtrados atuais
+        
+        // Paginação
+        let currentPage = 1;
+        const itemsPerPage = 20;
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchData();
@@ -155,8 +175,16 @@
                 if (!response.ok) throw new Error("Erro HTTP " + response.status);
                 rawData = await response.json();
                 
+                // Ordenar por data (mais recente primeiro) se disponível
+                rawData.sort((a, b) => {
+                    const dateA = a.data_resultado ? new Date(a.data_resultado) : new Date(0);
+                    const dateB = b.data_resultado ? new Date(b.data_resultado) : new Date(0);
+                    return dateB - dateA;
+                });
+
                 populateSelects(rawData);
-                renderTable(rawData);
+                filteredData = rawData; // Inicializa filtrados com tudo
+                renderTable();
                 updateDashboard(rawData);
             } catch (error) {
                 document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro: ${error.message} - Verifique o arquivo JSON.</td></tr>`;
@@ -172,12 +200,10 @@
                 if(item.uf) ufs.add(item.uf);
                 if(item.cidade) cidades.add(item.cidade);
                 
-                // Coleta fornecedores do resumo ou dos itens
                 if (item.resumo_fornecedores) {
                     Object.keys(item.resumo_fornecedores).forEach(f => fornecedores.add(f));
                 }
                 
-                // Backup: procura nos itens caso resumo esteja vazio
                 const itens = item.itens_todos_fornecedores || item.itens || [];
                 itens.forEach(i => {
                     const forn = i.nome_fornecedor || i.nomeRazaoSocialFornecedor;
@@ -206,53 +232,67 @@
             const cidade = document.getElementById('cidadeFilter').value;
             const fornecedor = document.getElementById('fornecedorFilter').value;
 
-            const filtered = rawData.filter(item => {
-                // Filtro Texto
+            filteredData = rawData.filter(item => {
                 const matchTexto = (item.objeto || '').toLowerCase().includes(termo) || 
                                    (item.orgao_nome || '').toLowerCase().includes(termo) ||
                                    (item.numero_pregao || '').toLowerCase().includes(termo);
                 
-                // Filtros Básicos
                 const matchUf = uf ? item.uf === uf : true;
                 const matchCidade = cidade ? item.cidade === cidade : true;
 
-                // Filtro Fornecedor (complexo: verifica resumo ou itens)
                 let matchForn = true;
                 if (fornecedor) {
                     const hasInResumo = item.resumo_fornecedores && item.resumo_fornecedores.hasOwnProperty(fornecedor);
-                    
                     const itens = item.itens_todos_fornecedores || item.itens || [];
                     const hasInItems = itens.some(i => {
                         const nome = i.nome_fornecedor || i.nomeRazaoSocialFornecedor || '';
                         return nome === fornecedor;
                     });
-                    
                     matchForn = hasInResumo || hasInItems;
                 }
 
                 return matchTexto && matchUf && matchCidade && matchForn;
             });
 
-            renderTable(filtered);
-            updateDashboard(filtered);
+            currentPage = 1; // Reseta para primeira página ao filtrar
+            renderTable();
+            updateDashboard(filteredData);
         }
 
-        function renderTable(data) {
+        function changePage(direction) {
+            const maxPage = Math.ceil(filteredData.length / itemsPerPage);
+            const newPage = currentPage + direction;
+
+            if (newPage >= 1 && newPage <= maxPage) {
+                currentPage = newPage;
+                renderTable();
+            }
+        }
+
+        function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            if (data.length === 0) {
+            if (filteredData.length === 0) {
                 document.getElementById('noResults').style.display = 'block';
+                document.getElementById('paginationControls').style.display = 'none';
                 return;
             }
             document.getElementById('noResults').style.display = 'none';
+            document.getElementById('paginationControls').style.display = 'flex';
 
-            data.forEach((item, index) => { // Nota: index aqui é relativo ao array filtrado.
-                // Truque para manter referência ao objeto original no Modal:
-                // Vamos passar o objeto stringificado no botão (ou usar ID se houvesse ID único garantido)
-                // Para simplificar, vamos salvar o array filtrado globalmente ou buscar pelo item.
-                // Abordagem atual: Attach data no elemento.
-                
+            // Lógica de Paginação
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+            const maxPage = Math.ceil(filteredData.length / itemsPerPage);
+
+            // Atualiza controles
+            document.getElementById('pageInfo').innerText = `Página ${currentPage} de ${maxPage} (${filteredData.length} total)`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === maxPage;
+
+            pageData.forEach((item) => { 
                 const tr = document.createElement('tr');
                 const dataF = item.data_resultado ? new Date(item.data_resultado).toLocaleDateString('pt-BR') : '-';
                 
@@ -274,7 +314,6 @@
                     </td>
                 `;
                 
-                // Listener direto no botão para evitar problemas de índice
                 tr.querySelector('.action-btn').addEventListener('click', () => openModal(item));
                 tbody.appendChild(tr);
             });
@@ -283,7 +322,6 @@
         function updateDashboard(data) {
             document.getElementById('totalLicitacoes').innerText = data.length;
             
-            // Total Fornecedores (baseado no filtro atual)
             const forns = new Set();
             let totalVal = 0;
 
@@ -291,7 +329,6 @@
                 if(lic.resumo_fornecedores) {
                     Object.keys(lic.resumo_fornecedores).forEach(k => forns.add(k));
                 }
-                
                 const itens = lic.itens_todos_fornecedores || lic.itens || [];
                 itens.forEach(i => {
                     const v = i.valor_total_item || (i.valor_unitario * i.quantidade) || 0;
@@ -304,8 +341,8 @@
         }
 
         function openModal(item) {
-            const modalContent = document.getElementById('modalContent');
-            modalContent.innerHTML = `
+            // Cabeçalho do Modal
+            document.getElementById('modalContent').innerHTML = `
                 <div class="row">
                     <div class="col-md-8">
                         <strong>Órgão:</strong> ${item.orgao_nome}<br>
@@ -317,43 +354,89 @@
                     </div>
                 </div>
             `;
-
             document.getElementById('modalLinkEdital').href = item.link_edital || '#';
 
-            const tbodyItems = document.getElementById('modalItemsBody');
-            tbodyItems.innerHTML = '';
+            const tbody = document.getElementById('modalItemsBody');
+            tbody.innerHTML = '';
             
             const listaItens = item.itens_todos_fornecedores && item.itens_todos_fornecedores.length > 0 
                                ? item.itens_todos_fornecedores 
                                : (item.itens || []);
 
             if (listaItens.length === 0) {
-                tbodyItems.innerHTML = '<tr><td colspan="6" class="text-center">Sem dados de itens.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Sem dados de itens.</td></tr>';
             } else {
-                listaItens.forEach(prod => {
-                    const valUnit = parseFloat(prod.valor_unitario || 0);
-                    const qtd = parseFloat(prod.quantidade || 0);
-                    const total = prod.valor_total_item || (valUnit * qtd);
-                    
-                    // Tenta achar o nome do fornecedor em várias chaves possíveis
-                    const fornecedorNome = prod.nome_fornecedor || prod.nomeRazaoSocialFornecedor || prod.razao_social || '<span class="text-muted fst-italic">Não informado</span>';
+                // AGRUPAMENTO
+                const grupos = {};
+                const semVencedor = [];
 
-                    const row = `
-                        <tr>
-                            <td>${prod.numero_item}</td>
-                            <td>${prod.descricao}</td>
-                            <td class="text-primary fw-bold small">${fornecedorNome}</td>
-                            <td class="text-center">${qtd}</td>
-                            <td class="text-end">${valUnit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                            <td class="text-end fw-bold">${total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                listaItens.forEach(prod => {
+                    const forn = prod.nome_fornecedor || prod.nomeRazaoSocialFornecedor;
+                    
+                    if (!forn || forn.trim() === '') {
+                        semVencedor.push(prod);
+                    } else {
+                        if (!grupos[forn]) grupos[forn] = { total: 0, itens: [] };
+                        grupos[forn].items.push(prod);
+                        
+                        const val = prod.valor_total_item || ((prod.valor_unitario||0) * (prod.quantidade||0));
+                        grupos[forn].total += parseFloat(val);
+                    }
+                });
+
+                // Ordenar Fornecedores por maior valor ganho
+                const nomesOrdenados = Object.keys(grupos).sort((a, b) => grupos[b].total - grupos[a].total);
+
+                // 1. Renderiza Fornecedores Vencedores
+                nomesOrdenados.forEach(nomeForn => {
+                    const grupo = grupos[nomeForn];
+                    const totalFormatado = grupo.total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+
+                    // Cabeçalho do Grupo
+                    tbody.innerHTML += `
+                        <tr class="group-header">
+                            <td colspan="4"><i class="fas fa-trophy text-warning"></i> ${nomeForn}</td>
+                            <td class="text-end text-primary">${totalFormatado}</td>
                         </tr>
                     `;
-                    tbodyItems.innerHTML += row;
+
+                    // Itens do Grupo
+                    grupo.items.forEach(prod => {
+                        renderItemRow(tbody, prod);
+                    });
                 });
+
+                // 2. Renderiza Itens Fracassados/Sem Vencedor no final
+                if (semVencedor.length > 0) {
+                    tbody.innerHTML += `
+                        <tr class="group-header-fail">
+                            <td colspan="5"><i class="fas fa-times-circle"></i> Itens Sem Vencedor / Fracassados / Desertos</td>
+                        </tr>
+                    `;
+                    semVencedor.forEach(prod => {
+                        renderItemRow(tbody, prod);
+                    });
+                }
             }
 
             const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
             modal.show();
+        }
+
+        function renderItemRow(tbody, prod) {
+            const valUnit = parseFloat(prod.valor_unitario || 0);
+            const qtd = parseFloat(prod.quantidade || 0);
+            const total = prod.valor_total_item || (valUnit * qtd);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${prod.numero_item}</td>
+                    <td>${prod.descricao}</td>
+                    <td class="text-center">${qtd}</td>
+                    <td class="text-end">${valUnit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                    <td class="text-end fw-bold">${total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                </tr>
+            `;
         }
     </script>
 </body>
