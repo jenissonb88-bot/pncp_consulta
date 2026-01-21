@@ -2,8 +2,12 @@ name: 📊 Robô PNCP Ranking Automático
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # A cada 2 horas
+    - cron: '0 */2 * * *'  # Varredura de segurança a cada 2 horas
   workflow_dispatch:        # Botão manual
+  workflow_run:             # Permite que o workflow chame a si mesmo
+    workflows: ["📊 Robô PNCP Ranking Automático"]
+    types:
+      - completed
 
 concurrency:
   group: coleta-ranking-group
@@ -13,12 +17,14 @@ jobs:
   coleta:
     runs-on: ubuntu-latest
     timeout-minutes: 300 
+    # IMPORTANTE: Permissão para o bot disparar novas ações e gravar dados
+    permissions:
+      contents: write
+      actions: write
 
     env:
       TZ: 'America/Sao_Paulo'
-
-    permissions:
-      contents: write
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Necessário para disparar o próximo
 
     steps:
       - name: 📥 1. Checkout do Repositório
@@ -57,6 +63,7 @@ jobs:
           fi
 
       - name: 📤 7. Commit e Push
+        id: push-step
         if: steps.check-changes.outputs.status == 'has-changes'
         run: |
           CP=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
@@ -66,12 +73,25 @@ jobs:
           attempt=1
           while [ $attempt -le 5 ]; do
             if git push origin main; then
-              echo "✅ Dados salvos com sucesso!"
+              echo "push_success=true" >> $GITHUB_OUTPUT
               break
             else
-              echo "⚠️ Falha no push. Tentando rebase..."
               sleep 10
               git pull --rebase origin main
             fi
             attempt=$((attempt+1))
           done
+
+      - name: 🚀 8. Disparar Próxima Coleta (Loop Automático)
+        # Só dispara se o push foi feito com sucesso e se não chegamos em hoje
+        if: steps.push-step.outcome == 'success'
+        run: |
+          CHECKPOINT=$(cat checkpoint.txt)
+          HOJE=$(date +'%Y%m%d')
+          
+          if [ "$CHECKPOINT" -lt "$HOJE" ]; then
+            echo "Ainda há dias pendentes ($CHECKPOINT < $HOJE). Disparando nova coleta..."
+            gh workflow run main.yml
+          else
+            echo "✅ Chegamos na data atual. Parando loop automático."
+          fi
