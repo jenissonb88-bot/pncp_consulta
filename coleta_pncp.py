@@ -17,10 +17,11 @@ HEADERS = {
 }
 
 ARQ_DADOS = 'dados_pncp.json'
-ARQ_CHECKPOINT = 'checkpoint.txt'
+ARQ_CHECKPOINT = 'checkpoint_ranking.txt' # Checkpoint separado para não conflitar com o Sniper
 CNPJ_ALVO = "08778201000126"  # DROGAFONTE
 DATA_LIMITE_FINAL = datetime.now()
-MAX_WORKERS = 20  # Velocidade turbo: 20 processos simultâneos
+DIAS_POR_CICLO = 1  # Quantos dias ele avança por execução (Mude para 30 para buscar o passado)
+MAX_WORKERS = 20    # Velocidade turbo
 
 # -------------------------------------------------
 # MOTOR DE CONEXÃO
@@ -32,6 +33,7 @@ def criar_sessao():
     retry = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     adapter = HTTPAdapter(max_retries=retry, pool_connections=MAX_WORKERS, pool_maxsize=MAX_WORKERS)
     session.mount('https://', adapter)
+    session.mount('http://', adapter)
     return session
 
 # -------------------------------------------------
@@ -51,7 +53,7 @@ def salvar_estado(banco, data_proxima):
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [ESTADO SALVO] {len(banco)} licitações mapeadas.")
+    print(f"\n💾 [ESTADO SALVO] Checkpoint: {data_proxima.strftime('%d/%m/%Y')}")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -104,93 +106,102 @@ def processar_item_full(session, it, url_base_itens, cnpj_alvo):
 # -------------------------------------------------
 def run():
     session = criar_sessao()
-    data_atual = ler_checkpoint()
+    data_inicio = ler_checkpoint()
     
-    if data_atual.date() > DATA_LIMITE_FINAL.date():
-        print("✅ Tudo atualizado!")
+    if data_inicio.date() > DATA_LIMIT_FINAL.date():
+        print("✅ Ranking atualizado!")
         return
 
-    print(f"🚀 TURBO PNCP: Processando {data_atual.strftime('%d/%m/%Y')}")
-    banco_total = carregar_banco()
-    DATA_STR = data_atual.strftime('%Y%m%d')
+    data_fim = data_inicio + timedelta(days=DIAS_POR_CICLO - 1)
+    if data_fim > DATA_LIMIT_FINAL: data_fim = DATA_LIMIT_FINAL
+
+    print(f"--- 🚀 RANKING TURBO V2: {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')} ---")
     
-    pagina = 1
-    while True:
-        url_busca = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = {
-            "dataInicial": DATA_STR, "dataFinal": DATA_STR,
-            "codigoModalidadeContratacao": "6", "pagina": pagina,
-            "tamanhoPagina": 50, "niFornecedor": CNPJ_ALVO
-        }
+    banco_total = carregar_banco()
+    data_atual = data_inicio
 
-        resp = session.get(url_busca, params=params, timeout=30)
-        if resp.status_code != 200: break
+    while data_atual <= data_fim:
+        DATA_STR = data_atual.strftime('%Y%m%d')
+        print(f"\n📅 Dia {data_atual.strftime('%d/%m/%Y')}:", end=" ", flush=True)
         
-        json_resp = resp.json()
-        lics = json_resp.get('data', [])
-        if not lics: break
+        pagina_busca = 1
+        while True:
+            url_busca = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+            params = {
+                "dataInicial": DATA_STR, "dataFinal": DATA_STR,
+                "codigoModalidadeContratacao": "6", "pagina": pagina_busca,
+                "tamanhoPagina": 50, "niFornecedor": CNPJ_ALVO
+            }
 
-        print(f"📦 Página {pagina}: {len(lics)} editais.")
-
-        for lic in lics:
-            # 1. Identificação
-            cnpj_org = lic.get('orgaoEntidade', {}).get('cnpj')
-            ano, seq = lic.get('anoCompra'), lic.get('sequencialCompra')
-            uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
-            id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
+            resp = session.get(url_busca, params=params, timeout=30)
+            if resp.status_code != 200: break
             
-            print(f"  🔍 Analisando {id_lic}...", end=" ", flush=True)
+            json_resp = resp.json()
+            lics = json_resp.get('data', [])
+            if not lics: break
 
-            # 2. Paginação de Itens (Garantir que pega todos)
-            todos_itens_api = []
-            pag_item = 1
-            url_base_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
+            print(f"[Pág {pagina_busca}]", end=" ", flush=True)
+
+            for lic in lics:
+                cnpj_org = lic.get('orgaoEntidade', {}).get('cnpj')
+                ano, seq = lic.get('anoCompra'), lic.get('sequencialCompra')
+                uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
+                id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
+                
+                # Nome do Edital Oficial (Ex: 133/2024)
+                edital_oficial = f"{lic.get('numeroCompra')}/{ano}"
+                
+                # 1. Paginação de Itens
+                todos_itens_api = []
+                pag_item = 1
+                url_base_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
+                
+                while True:
+                    r_it = session.get(url_base_itens, params={'pagina': pag_item, 'tamanhoPagina': 1000}, timeout=20)
+                    if r_it.status_code != 200: break
+                    lote = r_it.json()
+                    if not lote: break
+                    todos_itens_api.extend(lote)
+                    if len(lote) < 1000: break
+                    pag_item += 1
+
+                # 2. Processamento Paralelo
+                itens_consolidados = []
+                resumo_ranking = {}
+                
+                with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    futures = [executor.submit(processar_item_full, session, it, url_base_itens, CNPJ_ALVO) for it in todos_itens_api]
+                    for future in concurrent.futures.as_completed(futures):
+                        resultado = future.result()
+                        if resultado:
+                            for r in resultado:
+                                itens_consolidados.append(r)
+                                nome = r['nome_fornecedor'] or "Desconhecido"
+                                resumo_ranking[nome] = resumo_ranking.get(nome, 0.0) + r['valor_total_item']
+
+                if itens_consolidados:
+                    banco_total[id_lic] = {
+                        "id_licitacao": id_lic,
+                        "orgao_nome": lic.get('orgaoEntidade', {}).get('razaoSocial'),
+                        "numero_pregao": edital_oficial, # Edital Oficial
+                        "uasg": uasg,
+                        "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
+                        "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
+                        "link_edital": f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}",
+                        "itens_todos_fornecedores": sorted(itens_consolidados, key=lambda x: x['numero_item']),
+                        "resumo_fornecedores": resumo_ranking,
+                        "ValorTotal": sum(resumo_ranking.values())
+                    }
+                    print("✅", end="", flush=True)
+
+            if pagina_busca >= json_resp.get('totalPaginas', 1): break
+            pagina_busca += 1
             
-            while True:
-                r_it = session.get(url_base_itens, params={'pagina': pag_item, 'tamanhoPagina': 1000})
-                if r_it.status_code != 200: break
-                lote = r_it.json()
-                if not lote: break
-                todos_itens_api.extend(lote)
-                if len(lote) < 1000: break
-                pag_item += 1
+        # Avança o dia e salva
+        data_atual += timedelta(days=1)
+        salvar_estado(banco_total, data_atual)
 
-            # 3. Processamento Turbo (Multithread)
-            itens_consolidados = []
-            resumo_ranking = {}
-            
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                futures = [executor.submit(processar_item_full, session, it, url_base_itens, CNPJ_ALVO) for it in todos_itens_api]
-                for future in concurrent.futures.as_completed(futures):
-                    resultado = future.result()
-                    if resultado:
-                        for r in resultado:
-                            itens_consolidados.append(r)
-                            # Atualiza ranking de fornecedores
-                            nome = r['nome_fornecedor'] or "Desconhecido"
-                            resumo_ranking[nome] = resumo_ranking.get(nome, 0.0) + r['valor_total_item']
-
-            # 4. Salvar no Objeto
-            if itens_consolidados:
-                banco_total[id_lic] = {
-                    "id_licitacao": id_lic,
-                    "orgao_nome": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "numero_pregao": f"{lic.get('numeroCompra')}/{ano}",
-                    "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
-                    "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
-                    "link_edital": f"https://pncp.gov.br/app/editais/{cnpj_org}/{ano}/{seq}",
-                    "itens_todos_fornecedores": sorted(itens_consolidados, key=lambda x: x['numero_item']),
-                    "resumo_fornecedores": resumo_ranking,
-                    "ValorTotal": sum(resumo_ranking.values())
-                }
-                print(f"OK! ({len(itens_consolidados)} itens mapeados)")
-            else:
-                print("Sem resultados homologados.")
-
-        if pagina >= json_resp.get('totalPaginas', 1): break
-        pagina += 1
-
-    salvar_estado(banco_total, data_atual + timedelta(days=1))
+    print("\n🏁 Ciclo de Ranking finalizado.")
 
 if __name__ == "__main__":
     run()
