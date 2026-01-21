@@ -2,7 +2,7 @@ name: 📊 Robô PNCP Ranking Automático
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Roda a cada 2 horas
+    - cron: '0 */2 * * *'  # A cada 2 horas
   workflow_dispatch:        # Botão manual
 
 concurrency:
@@ -39,8 +39,6 @@ jobs:
       - name: 🔄 4. Sincronizar e Executar Coleta
         run: |
           git pull origin main --rebase || echo "Sync OK"
-          
-          # Nome do seu arquivo conforme informado
           python coleta_pncp.py
 
       - name: ⚙️ 5. Configurar Git
@@ -48,18 +46,14 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 🔎 6. Verificar Mudanças (IMPORTANTE: Nomes Corrigidos)
+      - name: 🔎 6. Verificar Mudanças
         id: check-changes
         run: |
-          # AQUI ESTÁ O AJUSTE: Usando os nomes que você me passou
           git add dados_pncp.json checkpoint.txt
-          
           if git diff --cached --quiet; then
             echo "status=no-changes" >> $GITHUB_OUTPUT
-            echo "✅ Sem novos dados para salvar."
           else
             echo "status=has-changes" >> $GITHUB_OUTPUT
-            echo "📝 Novos dados detectados!"
           fi
 
       - name: 📤 7. Commit e Push
@@ -67,20 +61,17 @@ jobs:
         run: |
           CP=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
           TIMESTAMP=$(date '+%d/%m %H:%M')
-          
           git commit -m "📊 RANKING: Atualizado até $CP | $TIMESTAMP"
           
-          # Lógica de Push com Retry
-          max_attempts=5
           attempt=1
-          while [ $attempt -le $max_attempts ]; do
+          while [ $attempt -le 5 ]; do
             if git push origin main; then
-              echo "✅ Dados salvos no GitHub!"
+              echo "✅ Dados salvos com sucesso!"
               break
             else
-              echo "⚠️ Conflito no Push, tentando rebase..."
+              echo "⚠️ Falha no push. Tentando rebase..."
               sleep 10
               git pull --rebase origin main
             fi
-            ((attempt++))
+            attempt=$((attempt+1))
           done
