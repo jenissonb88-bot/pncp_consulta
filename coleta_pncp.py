@@ -9,11 +9,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # --- CONFIGURAÇÕES GERAIS ---
-# A ordem aqui é vital para evitar o erro "NameError"
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CNPJ_ALVO = "08778201000126"   # DROGAFONTE
-DATA_LIMITE_FINAL = datetime.now()
+DATA_LIMITE_FINAL = datetime.now() # Nome padronizado para evitar NameError
 DIAS_POR_CICLO = 1             # Mude para 30 para buscar o passado de uma vez
 MAX_WORKERS = 20               # Processos simultâneos
 ARQ_DADOS = 'dados_pncp.json'
@@ -52,10 +51,8 @@ def carregar_banco():
     return {}
 
 def salvar_estado(banco, data_proxima):
-    # Salva a lista de licitações
     with open(ARQ_DADOS, 'w', encoding='utf-8') as f:
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
-    # Atualiza o checkpoint no arquivo texto
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
     print(f"\n💾 [SALVO] Banco: {len(banco)} processos | Checkpoint: {data_proxima.strftime('%d/%m/%Y')}")
@@ -102,18 +99,19 @@ def processar_item_full(session, it, url_base_itens, cnpj_alvo):
     return None
 
 # -------------------------------------------------
-# EXECUÇÃO PRINCIPAL (LOOP DE CICLOS)
+# EXECUÇÃO PRINCIPAL
 # -------------------------------------------------
 def run():
     session = criar_sessao()
     data_atual = ler_checkpoint()
     
-    if data_atual.date() > DATA_LIMIT_FINAL.date():
+    # Verificação corrigida para DATA_LIMITE_FINAL
+    if data_atual.date() > DATA_LIMITE_FINAL.date():
         print("✅ Tudo atualizado!")
         return
 
     data_fim = data_atual + timedelta(days=DIAS_POR_CICLO - 1)
-    if data_fim > DATA_LIMIT_FINAL: data_fim = DATA_LIMIT_FINAL
+    if data_fim > DATA_LIMITE_FINAL: data_fim = DATA_LIMITE_FINAL
 
     print(f"--- 🚀 INICIANDO RANKING: {data_atual.strftime('%d/%m')} até {data_fim.strftime('%d/%m')} ---")
     
@@ -145,23 +143,21 @@ def run():
                 uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
                 id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
                 
-                # Pegando o Edital oficial
                 edital_oficial = f"{lic.get('numeroCompra')}/{ano}"
 
-                # Paginação de Itens
                 todos_itens_api = []
                 pag_item = 1
                 url_base_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
                 while True:
                     r_it = session.get(url_base_itens, params={'pagina': pag_item, 'tamanhoPagina': 1000}, timeout=20)
-                    if r_it.status_code != 200: break
-                    lote = r_it.json()
-                    if not lote: break
-                    todos_itens_api.extend(lote)
-                    if len(lote) < 1000: break
-                    pag_item += 1
+                    if r_it.status_code == 200:
+                        lote = r_it.json()
+                        if not lote: break
+                        todos_itens_api.extend(lote)
+                        if len(lote) < 1000: break
+                        pag_item += 1
+                    else: break
 
-                # Processamento Multithread
                 itens_consolidados = []
                 resumo_ranking = {}
                 with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -192,7 +188,6 @@ def run():
             if pagina >= json_resp.get('totalPaginas', 1): break
             pagina += 1
 
-        # Avança o dia e salva o estado
         data_atual += timedelta(days=1)
         salvar_estado(banco_total, data_atual)
 
