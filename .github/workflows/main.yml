@@ -3,28 +3,25 @@ name: 📊 Robô PNCP Ranking Automático
 on:
   schedule:
     - cron: '0 */2 * * *'  # Varredura de segurança a cada 2 horas
-  workflow_dispatch:        # Botão manual
-  workflow_run:             # Permite que o workflow chame a si mesmo
-    workflows: ["📊 Robô PNCP Ranking Automático"]
-    types:
-      - completed
+  workflow_dispatch:        # Permite rodar manualmente
 
+# --- LÓGICA DE FILA INDIANA ---
+# Impede que dois robôs rodem ao mesmo tempo, mas coloca o novo na espera.
 concurrency:
-  group: coleta-ranking-group
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   coleta:
     runs-on: ubuntu-latest
     timeout-minutes: 300 
-    # IMPORTANTE: Permissão para o bot disparar novas ações e gravar dados
+
     permissions:
       contents: write
-      actions: write
+      actions: write  # Essencial para o auto-reinício
 
     env:
       TZ: 'America/Sao_Paulo'
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Necessário para disparar o próximo
 
     steps:
       - name: 📥 1. Checkout do Repositório
@@ -44,6 +41,7 @@ jobs:
 
       - name: 🔄 4. Sincronizar e Executar Coleta
         run: |
+          # Puxa mudanças caso o robô anterior tenha acabado de salvar algo
           git pull origin main --rebase || echo "Sync OK"
           python coleta_pncp.py
 
@@ -52,46 +50,28 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 🔎 6. Verificar Mudanças
-        id: check-changes
+      - name: 📤 6. Commit e Push
         run: |
+          # Adiciona os arquivos específicos do Ranking
           git add dados_pncp.json checkpoint.txt
-          if git diff --cached --quiet; then
-            echo "status=no-changes" >> $GITHUB_OUTPUT
-          else
-            echo "status=has-changes" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📤 7. Commit e Push
-        id: push-step
-        if: steps.check-changes.outputs.status == 'has-changes'
-        run: |
-          CP=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
           TIMESTAMP=$(date '+%d/%m %H:%M')
-          git commit -m "📊 RANKING: Atualizado até $CP | $TIMESTAMP"
+          git commit -m "📊 RANKING: Atualizado | $TIMESTAMP" || echo "Sem mudanças"
           
-          attempt=1
-          while [ $attempt -le 5 ]; do
-            if git push origin main; then
-              echo "push_success=true" >> $GITHUB_OUTPUT
-              break
-            else
-              sleep 10
-              git pull --rebase origin main
-            fi
-            attempt=$((attempt+1))
-          done
+          # Tenta o push com rebase para evitar conflitos de fila
+          git pull origin main --rebase
+          git push origin main
 
-      - name: 🚀 8. Disparar Próxima Coleta (Loop Automático)
-        # Só dispara se o push foi feito com sucesso e se não chegamos em hoje
-        if: steps.push-step.outcome == 'success'
+      - name: 🚀 7. Reiniciar Loop (Auto-Trigger)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CHECKPOINT=$(cat checkpoint.txt)
           HOJE=$(date +'%Y%m%d')
           
           if [ "$CHECKPOINT" -lt "$HOJE" ]; then
-            echo "Ainda há dias pendentes ($CHECKPOINT < $HOJE). Disparando nova coleta..."
+            echo "Ainda há dias pendentes ($CHECKPOINT < $HOJE). Reiniciando..."
+            sleep 10
             gh workflow run main.yml
           else
-            echo "✅ Chegamos na data atual. Parando loop automático."
+            echo "✅ Chegamos na data atual. Fim do ciclo."
           fi
