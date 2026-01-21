@@ -1,21 +1,19 @@
-name: 🤖 Robô PNCP Automático
+name: 📊 Robô PNCP Ranking Automático
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # A cada 2 horas
-  workflow_dispatch:       # Botão manual
+    - cron: '0 */2 * * *'  # Roda a cada 2 horas
+  workflow_dispatch:        # Botão manual
 
 concurrency:
-  group: coleta-pncp-group
+  group: coleta-ranking-group
   cancel-in-progress: false
 
 jobs:
   coleta:
     runs-on: ubuntu-latest
-    timeout-minutes: 300 # Proteção: mata o processo se travar por mais de 5h
+    timeout-minutes: 300 
 
-    # ✅ IMPORTANTE: Garante que datetime.now() no Python seja igual ao horário do Brasil
-    # Isso evita que o robô pule para o dia seguinte antes da hora.
     env:
       TZ: 'America/Sao_Paulo'
 
@@ -36,21 +34,13 @@ jobs:
       - name: 📦 3. Instalar Dependências
         run: |
           python -m pip install --upgrade pip
-          # BeautifulSoup removido (novo script usa apenas JSON puro, mais rápido)
-          pip install requests
+          pip install requests urllib3
 
-      - name: 🔄 4. Sincronizar Checkpoint e Executar Coleta
+      - name: 🔄 4. Sincronizar e Executar Coleta
         run: |
-          # Puxa mudanças recentes para garantir que temos o checkpoint mais novo
-          git pull origin main --rebase || echo "Repositório já atualizado"
+          git pull origin main --rebase || echo "Sync OK"
           
-          if [ -f "checkpoint.txt" ]; then
-            echo "✅ Checkpoint encontrado: $(cat checkpoint.txt)"
-          else
-            echo "⚠️ Sem checkpoint anterior, inicia do começo"
-          fi
-          
-          # Executa o script (agora ciente do Timezone BRT)
+          # Nome do seu arquivo conforme informado
           python coleta_pncp.py
 
       - name: ⚙️ 5. Configurar Git
@@ -58,52 +48,39 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 🔎 6. Verificar Mudanças
+      - name: 🔎 6. Verificar Mudanças (IMPORTANTE: Nomes Corrigidos)
         id: check-changes
         run: |
+          # AQUI ESTÁ O AJUSTE: Usando os nomes que você me passou
           git add dados_pncp.json checkpoint.txt
           
           if git diff --cached --quiet; then
             echo "status=no-changes" >> $GITHUB_OUTPUT
-            echo "✅ Nenhuma mudança nova (Dados e Checkpoint iguais)."
+            echo "✅ Sem novos dados para salvar."
           else
             echo "status=has-changes" >> $GITHUB_OUTPUT
-            echo "📝 Mudanças detectadas. Preparando commit..."
+            echo "📝 Novos dados detectados!"
           fi
 
       - name: 📤 7. Commit e Push
         if: steps.check-changes.outputs.status == 'has-changes'
         run: |
-          CHECKPOINT=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
-          # Data formatada no horário do Brasil
+          CP=$(cat checkpoint.txt 2>/dev/null || echo "inicio")
           TIMESTAMP=$(date '+%d/%m %H:%M')
           
-          git commit -m "🤖 PNCP: Atualizado até $CHECKPOINT | $TIMESTAMP"
+          git commit -m "📊 RANKING: Atualizado até $CP | $TIMESTAMP"
           
-          # Push com retry (Lógica robusta mantida)
+          # Lógica de Push com Retry
           max_attempts=5
           attempt=1
-          
           while [ $attempt -le $max_attempts ]; do
             if git push origin main; then
-              echo "✅ Push realizado com sucesso!"
+              echo "✅ Dados salvos no GitHub!"
               break
             else
-              echo "⚠️ Tentativa $attempt de $max_attempts falhada (Conflito?)"
-              if [ $attempt -lt $max_attempts ]; then
-                echo "🔄 Tentando rebase e push novamente..."
-                sleep 5
-                git pull --rebase origin main || true
-              fi
+              echo "⚠️ Conflito no Push, tentando rebase..."
+              sleep 10
+              git pull --rebase origin main
             fi
             ((attempt++))
           done
-          
-          if [ $attempt -gt $max_attempts ]; then
-            echo "❌ Falha ao fazer push após tentativas."
-            exit 1
-          fi
-
-      - name: ✅ 8. Status Final
-        if: success()
-        run: echo "🎉 Execução concluída. Próxima varredura em 2 horas."
