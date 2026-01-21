@@ -17,11 +17,13 @@ HEADERS = {
 }
 
 ARQ_DADOS = 'dados_pncp.json'
-ARQ_CHECKPOINT = 'checkpoint_ranking.txt' # Checkpoint separado para não conflitar com o Sniper
+ARQ_CHECKPOINT = 'checkpoint_ranking.txt' 
 CNPJ_ALVO = "08778201000126"  # DROGAFONTE
+
+# CORREÇÃO AQUI: Definindo a variável limite corretamente
 DATA_LIMITE_FINAL = datetime.now()
-DIAS_POR_CICLO = 1  # Quantos dias ele avança por execução (Mude para 30 para buscar o passado)
-MAX_WORKERS = 20    # Velocidade turbo
+DIAS_POR_CICLO = 1  # Aumente para 30 para buscar o passado
+MAX_WORKERS = 20    
 
 # -------------------------------------------------
 # MOTOR DE CONEXÃO
@@ -43,7 +45,9 @@ def carregar_banco():
     if os.path.exists(ARQ_DADOS):
         try:
             with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
+                conteudo = f.read().strip()
+                if not conteudo: return {}
+                dados = json.loads(conteudo)
                 return {lic.get('id_licitacao'): lic for lic in dados}
         except: pass
     return {}
@@ -53,7 +57,7 @@ def salvar_estado(banco, data_proxima):
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [ESTADO SALVO] Checkpoint: {data_proxima.strftime('%d/%m/%Y')}")
+    print(f"\n💾 [RANKING SALVO] {len(banco)} processos. Checkpoint: {data_proxima.strftime('%d/%m/%Y')}")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -67,7 +71,6 @@ def ler_checkpoint():
 # WORKER: PROCESSAMENTO PARALELO DE ITENS
 # -------------------------------------------------
 def processar_item_full(session, it, url_base_itens, cnpj_alvo):
-    """Analisa um item e retorna todos os seus vencedores."""
     if not it.get('temResultado'):
         return None
 
@@ -108,12 +111,13 @@ def run():
     session = criar_sessao()
     data_inicio = ler_checkpoint()
     
-    if data_inicio.date() > DATA_LIMIT_FINAL.date():
-        print("✅ Ranking atualizado!")
+    # CORREÇÃO AQUI TAMBÉM: Usando DATA_LIMITE_FINAL
+    if data_inicio.date() > DATA_LIMITE_FINAL.date():
+        print("✅ Ranking está atualizado até hoje!")
         return
 
     data_fim = data_inicio + timedelta(days=DIAS_POR_CICLO - 1)
-    if data_fim > DATA_LIMIT_FINAL: data_fim = DATA_LIMIT_FINAL
+    if data_fim > DATA_LIMITE_FINAL: data_fim = DATA_LIMITE_FINAL
 
     print(f"--- 🚀 RANKING TURBO V2: {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')} ---")
     
@@ -148,10 +152,9 @@ def run():
                 uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
                 id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
                 
-                # Nome do Edital Oficial (Ex: 133/2024)
+                # Edital Oficial 133/2024
                 edital_oficial = f"{lic.get('numeroCompra')}/{ano}"
                 
-                # 1. Paginação de Itens
                 todos_itens_api = []
                 pag_item = 1
                 url_base_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
@@ -165,7 +168,6 @@ def run():
                     if len(lote) < 1000: break
                     pag_item += 1
 
-                # 2. Processamento Paralelo
                 itens_consolidados = []
                 resumo_ranking = {}
                 
@@ -183,7 +185,7 @@ def run():
                     banco_total[id_lic] = {
                         "id_licitacao": id_lic,
                         "orgao_nome": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                        "numero_pregao": edital_oficial, # Edital Oficial
+                        "numero_pregao": edital_oficial,
                         "uasg": uasg,
                         "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
                         "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
@@ -197,11 +199,8 @@ def run():
             if pagina_busca >= json_resp.get('totalPaginas', 1): break
             pagina_busca += 1
             
-        # Avança o dia e salva
         data_atual += timedelta(days=1)
         salvar_estado(banco_total, data_atual)
-
-    print("\n🏁 Ciclo de Ranking finalizado.")
 
 if __name__ == "__main__":
     run()
