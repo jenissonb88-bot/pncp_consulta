@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Ranking PNCP - Filtros Avançados</title>
+    <title>Ranking PNCP - Estabilidade de Dados</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -10,10 +10,9 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .detalhes-row { display: none; background-color: #f8fafc; }
         .detalhes-row.active { display: table-row; }
-        .input-filtro { @apply p-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-full; }
     </style>
 </head>
-<body class="bg-slate-50 p-4 font-sans antialiased text-slate-800">
+<body class="bg-slate-50 p-4 font-sans text-slate-800">
 
     <div class="max-w-7xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
@@ -21,41 +20,36 @@
                 <h1 class="text-2xl font-black text-slate-900 tracking-tight">📊 Inteligência de Mercado</h1>
                 <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Sincronizando...</div>
             </div>
-            <div class="text-right hidden md:block">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Total na Base</p>
-                <div id="count" class="text-xl font-black text-slate-700">0</div>
-            </div>
         </header>
 
         <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-slate-200">
-            <h2 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Filtros de Pesquisa</h2>
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Edital</label>
-                    <input type="text" id="fEdital" placeholder="Ex: 052/2024" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Edital</label>
+                    <input type="text" id="fEdital" class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">UASG / Código</label>
-                    <input type="text" id="fUasg" placeholder="Ex: 332000" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">UASG</label>
+                    <input type="text" id="fUasg" class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Fornecedor (Vencedor)</label>
-                    <input type="text" id="fFornecedor" placeholder="Nome ou CNPJ" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Fornecedor</label>
+                    <input type="text" id="fFornecedor" class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Cidade</label>
-                    <input type="text" id="fCidade" placeholder="Nome da cidade" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Cidade</label>
+                    <input type="text" id="fCidade" class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Estado (UF)</label>
-                    <input type="text" id="fUf" placeholder="Ex: MA, SP" maxlength="2" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full uppercase">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Estado (UF)</label>
+                    <input type="text" id="fUf" maxlength="2" class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 uppercase">
                 </div>
             </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
             <table class="min-w-full">
-                <thead class="bg-slate-900 text-white text-[10px] uppercase tracking-wider font-bold">
+                <thead class="bg-slate-900 text-white text-[10px] uppercase font-bold tracking-widest">
                     <tr>
                         <th class="px-6 py-4 text-left">Edital / UASG</th>
                         <th class="px-6 py-4 text-left">Órgão / Localidade</th>
@@ -69,7 +63,7 @@
         <div class="mt-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
             <button id="btnPrev" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-30">Anterior</button>
             <div class="text-center">
-                <span id="pageInfo" class="text-xs font-bold text-slate-500 uppercase tracking-widest">Página 1 de 1</span>
+                <span id="pageInfo" class="text-xs font-bold text-slate-500 uppercase tracking-widest">Aguardando dados...</span>
                 <div id="totalVolume" class="text-[10px] text-emerald-600 font-black mt-1">R$ 0,00 (Total Filtrado)</div>
             </div>
             <button id="btnNext" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-30">Próxima</button>
@@ -78,85 +72,105 @@
 
     <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
         <div class="loading w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-        <p class="text-slate-500 font-bold text-xs uppercase tracking-widest">Carregando Filtros Avançados...</p>
+        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest text-center px-4">Iniciando...</p>
+        <div id="progressBar" class="w-48 h-1 bg-slate-100 mt-4 rounded-full overflow-hidden">
+            <div id="progressFill" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
+        </div>
     </div>
 
     <script>
         let fullData = [];
         let filteredData = [];
         let currentPage = 1;
-        const itemsPerPage = 25; // Conforme solicitado
+        const itemsPerPage = 25;
+
+        // Função para atualizar o progresso visual
+        function updateProgress(step, text) {
+            const spinnerText = document.getElementById('spinnerText');
+            const progressFill = document.getElementById('progressFill');
+            spinnerText.innerText = text;
+            progressFill.style.width = step + "%";
+        }
 
         async function init() {
             const statusEl = document.getElementById('status');
             const spinnerEl = document.getElementById('spinner');
 
             try {
+                // Passo 1: Download
+                updateProgress(20, "Conectando ao GitHub...");
                 const res = await fetch('dados_pncp.zip?v=' + Date.now());
-                if (!res.ok) throw new Error("Base de dados não encontrada.");
-
-                const blob = await res.blob();
-                const zip = await JSZip.loadAsync(blob);
+                if (!res.ok) throw new Error("Não foi possível baixar o arquivo ZIP.");
+                
+                // Passo 2: ArrayBuffer (mais rápido que Blob)
+                updateProgress(40, "Baixando base de dados...");
+                const buffer = await res.arrayBuffer();
+                
+                // Passo 3: Descompactação
+                updateProgress(60, "Descompactando arquivos...");
+                const zip = await JSZip.loadAsync(buffer);
                 const jsonFile = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.json') && !f.dir);
+                if (!jsonFile) throw new Error("JSON não encontrado.");
+
+                // Passo 4: Processamento de Texto
+                updateProgress(80, "Lendo volume de dados...");
                 const text = await jsonFile.async("string");
                 
-                fullData = JSON.parse(text);
-                filteredData = [...fullData];
-
-                spinnerEl.classList.add('hidden');
-                statusEl.innerText = "ONLINE";
-                statusEl.className = "mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 uppercase inline-block";
-                
-                document.getElementById('count').innerText = fullData.length;
-                applyFilters();
+                // Passo 5: Parse (Onde costuma travar)
+                updateProgress(95, "Finalizando montagem...");
+                // Usamos setTimeout para dar um respiro ao navegador antes do parse
+                setTimeout(() => {
+                    fullData = JSON.parse(text);
+                    filteredData = [...fullData];
+                    
+                    spinnerEl.classList.add('hidden');
+                    statusEl.innerText = "ONLINE";
+                    statusEl.className = "mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 uppercase inline-block";
+                    
+                    applyFilters();
+                }, 100);
 
             } catch (e) {
-                spinnerEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold">${e.message}</div>`;
+                spinnerEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold"><p class="mb-4 text-lg">⚠️ ERRO CRÍTICO</p><p class="text-xs text-slate-500 font-mono">${e.message}</p></div>`;
             }
         }
 
         function applyFilters() {
-            const edital = document.getElementById('fEdital').value.toLowerCase();
-            const uasg = document.getElementById('fUasg').value.toLowerCase();
-            const fornecedor = document.getElementById('fFornecedor').value.toLowerCase();
-            const cidade = document.getElementById('fCidade').value.toLowerCase();
-            const uf = document.getElementById('fUf').value.toLowerCase();
+            const filters = {
+                edital: document.getElementById('fEdital').value.toLowerCase(),
+                uasg: document.getElementById('fUasg').value.toLowerCase(),
+                forn: document.getElementById('fFornecedor').value.toLowerCase(),
+                cidade: document.getElementById('fCidade').value.toLowerCase(),
+                uf: document.getElementById('fUf').value.toLowerCase()
+            };
 
             filteredData = fullData.filter(d => {
-                // Checa fornecedores no resumo (nomes dos vencedores)
-                const matchFornecedor = !fornecedor || Object.keys(d.resumo || {}).some(name => name.toLowerCase().includes(fornecedor));
-                
+                const matchForn = !filters.forn || Object.keys(d.resumo || {}).some(n => n.toLowerCase().includes(filters.forn));
                 return (
-                    (d.edital || "").toLowerCase().includes(edital) &&
-                    (d.uasg || "").toLowerCase().includes(uasg) &&
-                    (d.cidade || "").toLowerCase().includes(cidade) &&
-                    (d.uf || "").toLowerCase().includes(uf) &&
-                    matchFornecedor
+                    (d.edital || "").toLowerCase().includes(filters.edital) &&
+                    (d.uasg || "").toLowerCase().includes(filters.uasg) &&
+                    (d.cidade || "").toLowerCase().includes(filters.cidade) &&
+                    (d.uf || "").toLowerCase().includes(filters.uf) &&
+                    matchForn
                 );
             });
 
             currentPage = 1;
-            
-            // Atualiza Volume Total Filtrado
-            let totalVal = filteredData.reduce((acc, curr) => acc + (curr.total_licitacao || 0), 0);
-            document.getElementById('totalVolume').innerText = totalVal.toLocaleString('pt-br', {style:'currency', currency:'BRL'}) + " (Total Filtrado)";
-            
+            const totalVal = filteredData.reduce((acc, curr) => acc + (curr.total_licitacao || 0), 0);
+            document.getElementById('totalVolume').innerText = totalVal.toLocaleString('pt-br', {style:'currency', currency:'BRL'}) + " (Filtrado)";
             renderPage();
         }
 
         function renderPage() {
             const corpo = document.getElementById('corpo');
             const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            const pageData = filteredData.slice(start, end);
+            const pageData = filteredData.slice(start, start + itemsPerPage);
 
             let html = "";
             pageData.forEach((lic, i) => {
-                const totalLic = lic.total_licitacao || 0;
                 const idx = start + i;
-
                 const itensHtml = (lic.itens || []).map(it => `
-                    <div class="flex justify-between text-[10px] py-1 border-b border-slate-50 hover:bg-slate-50">
+                    <div class="flex justify-between text-[10px] py-1 border-b border-slate-50">
                         <span class="text-slate-600 w-2/3 truncate">#${it.item} - ${it.fornecedor}</span>
                         <span class="font-bold text-slate-800">R$ ${(it.total || 0).toLocaleString('pt-br')}</span>
                     </div>
@@ -172,13 +186,13 @@
                             <div class="font-bold text-slate-700 text-xs uppercase truncate w-64">${lic.orgao || 'N/A'}</div>
                             <div class="text-[9px] text-slate-400 font-bold uppercase">${lic.cidade || ''} / ${lic.uf || ''}</div>
                         </td>
-                        <td class="px-6 py-4 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                        <td class="px-6 py-4 text-right font-black text-slate-800 text-sm">R$ ${(lic.total_licitacao || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
                     </tr>
                     <tr id="d-${idx}" class="detalhes-row">
-                        <td colspan="3" class="p-4 bg-slate-50/50">
+                        <td colspan="3" class="p-4 bg-slate-50/50 shadow-inner">
                             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
                                 <div class="flex justify-between items-center mb-2 border-b pb-1">
-                                    <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Itens Homologados</h4>
+                                    <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Itens Detalhados</h4>
                                     <a href="${lic.link_edital}" target="_blank" class="text-[9px] bg-slate-900 text-white px-2 py-1 rounded font-bold uppercase">Ver PNCP</a>
                                 </div>
                                 <div class="max-h-48 overflow-y-auto pr-1">${itensHtml}</div>
@@ -187,15 +201,14 @@
                     </tr>`;
             });
 
-            corpo.innerHTML = html || '<tr><td colspan="3" class="p-10 text-center text-slate-400 italic">Nenhum resultado encontrado para estes filtros.</td></tr>';
-            
+            corpo.innerHTML = html || '<tr><td colspan="3" class="p-10 text-center text-slate-400 italic">Nenhum resultado.</td></tr>';
             const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
             document.getElementById('pageInfo').innerText = `Página ${currentPage} de ${totalPages}`;
             document.getElementById('btnPrev').disabled = currentPage === 1;
-            document.getElementById('btnNext').disabled = (currentPage === totalPages || filteredData.length === 0);
+            document.getElementById('btnNext').disabled = currentPage === totalPages || filteredData.length === 0;
         }
 
-        // Listeners para os novos filtros
+        // Listeners
         ['fEdital', 'fUasg', 'fFornecedor', 'fCidade', 'fUf'].forEach(id => {
             document.getElementById(id).addEventListener('input', applyFilters);
         });
