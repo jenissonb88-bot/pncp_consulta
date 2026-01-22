@@ -2,147 +2,234 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Inteligente PNCP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         .loading { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .detalhes-row { display: none; }
+        .detalhes-row { display: none; background-color: #f8fafc; }
         .detalhes-row.active { display: table-row; }
+        /* Scroll personalizado para a tabela interna */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-100 p-4 font-sans">
+<body class="bg-slate-100 p-4 font-sans text-slate-800">
+
     <div class="max-w-7xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
             <div>
-                <h1 class="text-2xl font-black text-slate-800">📊 Inteligência de Concorrência</h1>
-                <p class="text-slate-500 text-sm font-medium italic">Dados agrupados por vencedor e item homologado</p>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">📊 Painel de Concorrência</h1>
+                <p class="text-slate-500 text-sm font-medium">Leitura direta do arquivo: <span class="font-mono bg-slate-100 px-2 py-1 rounded">dados_pncp.zip</span></p>
             </div>
-            <div id="status" class="px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">Carregando...</div>
+            <div id="status" class="px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100 uppercase tracking-widest">
+                Carregando...
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <input type="text" id="filtro" placeholder="Filtrar Órgão, Edital ou UASG..." class="md:col-span-2 p-4 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="text" id="filtro" placeholder="Buscar Órgão, Edital, Fornecedor..." class="md:col-span-2 p-4 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400">
+            
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Processos</p>
-                <div id="count" class="text-xl font-black text-slate-700">0</div>
+                <p class="text-[10px] uppercase font-bold text-slate-400">Total de Editais</p>
+                <div id="count" class="text-2xl font-black text-slate-700">0</div>
             </div>
+            
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Total Analisado</p>
-                <div id="totalFinanceiro" class="text-xl font-black text-emerald-600">R$ 0,00</div>
+                <p class="text-[10px] uppercase font-bold text-slate-400">Volume Total</p>
+                <div id="totalFinanceiro" class="text-2xl font-black text-emerald-600">R$ 0,00</div>
             </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
             <table class="min-w-full">
-                <thead class="bg-slate-800 text-white text-[10px] uppercase tracking-tighter">
+                <thead class="bg-slate-800 text-white text-[10px] uppercase tracking-wider">
                     <tr>
-                        <th class="px-6 py-4 text-left">Edital / UASG</th>
-                        <th class="px-6 py-4 text-left">Órgão</th>
-                        <th class="px-6 py-4 text-left">Principais Vencedores</th>
-                        <th class="px-6 py-4 text-right">Valor Total</th>
+                        <th class="px-6 py-4 text-left font-bold">Edital / UASG</th>
+                        <th class="px-6 py-4 text-left font-bold">Órgão / Local</th>
+                        <th class="px-6 py-4 text-left font-bold">Resumo Vencedores</th>
+                        <th class="px-6 py-4 text-right font-bold">Valor Total</th>
                     </tr>
                 </thead>
-                <tbody id="corpo" class="text-sm divide-y divide-slate-100"></tbody>
+                <tbody id="corpo" class="text-sm divide-y divide-slate-100">
+                    </tbody>
             </table>
         </div>
     </div>
 
-    <div id="spinner" class="fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-50">
+    <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
         <div class="loading w-12 h-12 border-4 border-slate-200 rounded-full mb-4"></div>
-        <p class="text-slate-500 font-bold animate-pulse">Extraindo base de dados...</p>
+        <p class="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Descompactando ZIP...</p>
     </div>
 
     <script>
         let db = [];
 
+        // Função Principal de Leitura
         async function init() {
+            const statusEl = document.getElementById('status');
+            const spinnerEl = document.getElementById('spinner');
+
             try {
-                const res = await fetch('dados_pncp.zip?v=' + Date.now());
-                const zip = await JSZip.loadAsync(await res.blob());
-                db = JSON.parse(await zip.file("dados_pncp.json").async("string"));
-                document.getElementById('spinner').remove();
-                document.getElementById('status').innerText = "BASE SINCRONIZADA";
+                // 1. Baixa o arquivo ZIP (usa timestamp para evitar cache antigo)
+                // OBS: Se o seu arquivo no github for maiúsculo (dados_pncp.ZIP), altere abaixo.
+                const response = await fetch('dados_pncp.zip?v=' + Date.now());
+
+                if (!response.ok) {
+                    throw new Error(`Arquivo ZIP não encontrado (Erro ${response.status}). Verifique se o robô já rodou.`);
+                }
+
+                // 2. Abre o ZIP usando a biblioteca JSZip
+                const blob = await response.blob();
+                const zip = await JSZip.loadAsync(blob);
+
+                // 3. Procura o arquivo JSON lá dentro
+                // O nome aqui deve ser igual ao definido no Python (ARQ_JSON_INTERNO)
+                const arquivoInterno = zip.file("dados_pncp.json");
+
+                if (!arquivoInterno) {
+                    // Se não achar, lista o que tem dentro para ajudar a debugar
+                    const arquivosNoZip = Object.keys(zip.files).join(", ");
+                    throw new Error(`O ZIP foi aberto, mas não achei 'dados_pncp.json'. Arquivos encontrados: ${arquivosNoZip}`);
+                }
+
+                // 4. Converte o conteúdo para texto e depois para Objeto JSON
+                const jsonTexto = await arquivoInterno.async("string");
+                db = JSON.parse(jsonTexto);
+
+                // Sucesso
+                spinnerEl.classList.add('hidden'); // Esconde o loading
+                statusEl.innerText = "ONLINE";
+                statusEl.className = "px-4 py-2 rounded-full bg-green-50 text-green-600 text-xs font-bold border border-green-200 uppercase tracking-widest";
+                
                 render(db);
-            } catch (e) { document.getElementById('status').innerText = "ERRO AO CARREGAR"; }
+
+            } catch (e) {
+                console.error(e);
+                statusEl.innerText = "ERRO";
+                statusEl.className = "px-4 py-2 rounded-full bg-red-50 text-red-600 text-xs font-bold border border-red-200 uppercase tracking-widest";
+                spinnerEl.innerHTML = `<div class="text-center p-6"><p class="text-red-500 font-black text-xl mb-2">ERRO FATAL</p><p class="text-slate-500 text-sm max-w-md">${e.message}</p></div>`;
+            }
         }
 
+        // Renderiza a Tabela
         function render(dados) {
             const corpo = document.getElementById('corpo');
             corpo.innerHTML = "";
-            let soma = 0;
+            let somaTotal = 0;
 
             dados.forEach((lic, i) => {
-                soma += (lic.total_licitacao || 0);
-                const resumo = Object.entries(lic.resumo || {}).sort((a,b)=>b[1]-a[1]).slice(0,2)
-                    .map(([n,v])=>`<div class="text-[10px]"><b>${n.substring(0,15)}:</b> R$ ${v.toLocaleString('pt-br')}</div>`).join('');
+                somaTotal += (lic.total_licitacao || 0);
+                
+                // Resumo rápido (Top 2 vencedores)
+                const resumo = Object.entries(lic.resumo || {})
+                    .sort((a,b)=>b[1]-a[1])
+                    .slice(0,2)
+                    .map(([n,v])=>`<div class="text-[10px] truncate w-48"><b>${n.substring(0,15)}...</b> R$ ${v.toLocaleString('pt-br')}</div>`)
+                    .join('');
 
-                // Agrupamento por Fornecedor
+                // Agrupamento Detalhado por Fornecedor
                 const grupos = (lic.itens || []).reduce((acc, it) => {
-                    if (!acc[it.fornecedor]) acc[it.fornecedor] = { items: [], sub: 0, cnpj: it.cnpj, alvo: it.e_alvo };
-                    acc[it.fornecedor].items.push(it);
-                    acc[it.fornecedor].sub += it.total;
+                    const f = it.fornecedor || "Desconhecido";
+                    if (!acc[f]) acc[f] = { items: [], total: 0, cnpj: it.cnpj, alvo: it.e_alvo };
+                    acc[f].items.push(it);
+                    acc[f].total += it.total;
                     return acc;
                 }, {});
 
-                const htmlDetalhes = Object.entries(grupos).map(([nome, info]) => `
-                    <div class="mb-4 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                        <div class="bg-slate-50 p-3 border-b flex justify-between items-center">
-                            <span class="font-bold ${info.alvo ? 'text-orange-600' : 'text-slate-700'}">${nome} <small class="text-slate-400 font-normal">(${info.cnpj})</small></span>
-                            <span class="font-black text-slate-800">R$ ${info.sub.toLocaleString('pt-br')}</span>
+                // HTML dos Detalhes (Cards por Fornecedor)
+                const htmlDetalhes = Object.entries(grupos)
+                    .sort((a,b) => b[1].total - a[1].total)
+                    .map(([nome, info]) => `
+                    <div class="mb-4 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <div class="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center">
+                            <span class="text-xs font-bold ${info.alvo ? 'text-orange-600' : 'text-slate-700'} uppercase">
+                                ${nome} <span class="text-slate-400 font-normal ml-1">(${info.cnpj})</span>
+                            </span>
+                            <span class="text-xs font-black text-slate-800">R$ ${info.total.toLocaleString('pt-br')}</span>
                         </div>
-                        <table class="w-full text-[10px] text-left">
-                            <thead class="text-slate-400 border-b">
-                                <tr>
-                                    <th class="p-2">Item</th>
-                                    <th class="p-2">Descrição</th>
-                                    <th class="p-2 text-center">Data Homo</th>
-                                    <th class="p-2 text-center">Qtd</th>
-                                    <th class="p-2 text-right">Unitário</th>
-                                    <th class="p-2 text-right">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${info.items.map(it => `
-                                    <tr class="border-b border-slate-50 hover:bg-slate-50">
-                                        <td class="p-2 font-bold text-slate-400">#${it.item}</td>
-                                        <td class="p-2 text-slate-600">${it.desc}</td>
-                                        <td class="p-2 text-center text-slate-500">${it.data_homo}</td>
-                                        <td class="p-2 text-center">${it.qtd}</td>
-                                        <td class="p-2 text-right">R$ ${it.unitario.toLocaleString('pt-br', {minimumFractionDigits:4})}</td>
-                                        <td class="p-2 text-right font-bold">R$ ${it.total.toLocaleString('pt-br')}</td>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-[10px] text-left">
+                                <thead class="text-slate-400 bg-white">
+                                    <tr>
+                                        <th class="p-2 font-normal">Item</th>
+                                        <th class="p-2 font-normal w-1/2">Descrição</th>
+                                        <th class="p-2 font-normal text-center">Data Homo</th>
+                                        <th class="p-2 font-normal text-center">Qtd</th>
+                                        <th class="p-2 font-normal text-right">Unitário</th>
+                                        <th class="p-2 font-normal text-right">Total</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    ${info.items.map(it => `
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="p-2 font-bold text-slate-400 text-center">#${it.item}</td>
+                                            <td class="p-2 text-slate-600">${it.desc}</td>
+                                            <td class="p-2 text-center text-slate-400 font-mono">${it.data_homo || '-'}</td>
+                                            <td class="p-2 text-center font-bold text-slate-700">${it.qtd}</td>
+                                            <td class="p-2 text-right text-slate-500">R$ ${it.unitario.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                                            <td class="p-2 text-right font-bold text-slate-700">R$ ${it.total.toLocaleString('pt-br')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `).join('');
 
+                // Linha Principal da Tabela
                 corpo.innerHTML += `
-                    <tr class="cursor-pointer hover:bg-blue-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
-                        <td class="px-6 py-4"><b class="text-blue-600">${lic.edital}</b><div class="text-[10px] font-mono text-slate-300">${lic.uasg}</div></td>
-                        <td class="px-6 py-4"><div class="font-bold text-slate-700 uppercase text-xs">${lic.orgao}</div><div class="text-[10px] text-slate-400">${lic.cidade}/${lic.uf}</div></td>
+                    <tr class="cursor-pointer hover:bg-blue-50 transition-colors border-b border-slate-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
+                        <td class="px-6 py-4">
+                            <div class="font-black text-blue-600 text-sm">${lic.edital}</div>
+                            <div class="text-[10px] font-mono text-slate-400 mt-1">UASG: ${lic.uasg || '---'}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-700 uppercase text-xs truncate w-48" title="${lic.orgao}">${lic.orgao}</div>
+                            <div class="text-[10px] text-slate-400">${lic.cidade}/${lic.uf}</div>
+                        </td>
                         <td class="px-6 py-4">${resumo}</td>
-                        <td class="px-6 py-4 text-right font-black text-slate-700">R$ ${lic.total_licitacao.toLocaleString('pt-br')}</td>
+                        <td class="px-6 py-4 text-right font-black text-slate-700 text-sm">R$ ${lic.total_licitacao.toLocaleString('pt-br')}</td>
                     </tr>
-                    <tr id="d-${i}" class="detalhes-row bg-slate-50/50">
-                        <td colspan="4" class="p-6">
-                            <div class="flex justify-between mb-4"><h3 class="font-black text-slate-500 text-xs uppercase tracking-widest">Detalhamento por Vencedor</h3><a href="${lic.link_edital}" target="_blank" class="bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-bold">Ver no PNCP</a></div>
-                            ${htmlDetalhes}
+                    <tr id="d-${i}" class="detalhes-row">
+                        <td colspan="4" class="p-6 bg-slate-50 inner-shadow">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Detalhamento Completo
+                                </h3>
+                                <a href="${lic.link_edital}" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-lg shadow-slate-300/50">
+                                    Acessar Edital no PNCP ↗
+                                </a>
+                            </div>
+                            <div class="max-h-[500px] overflow-y-auto pr-2 custom-scroll">
+                                ${htmlDetalhes}
+                            </div>
                         </td>
                     </tr>
                 `;
             });
+
             document.getElementById('count').innerText = dados.length;
-            document.getElementById('totalFinanceiro').innerText = soma.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+            document.getElementById('totalFinanceiro').innerText = somaTotal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
         }
 
+        // Filtro de Pesquisa
         document.getElementById('filtro').addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase();
-            render(db.filter(d => d.orgao.toLowerCase().includes(val) || d.edital.toLowerCase().includes(val) || d.uasg.includes(val)));
+            const filtrados = db.filter(d => 
+                d.orgao.toLowerCase().includes(val) || 
+                d.edital.toLowerCase().includes(val) || 
+                d.uasg.includes(val) ||
+                JSON.stringify(d.resumo).toLowerCase().includes(val)
+            );
+            render(filtrados);
         });
 
+        // Inicia
         init();
     </script>
 </body>
