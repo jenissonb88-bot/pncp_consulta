@@ -2,164 +2,131 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Ranking Inteligente PNCP</title>
+    <title>Ranking PNCP - Diagnóstico</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .loading { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .detalhes-row { display: none; background-color: #f8fafc; }
-        .detalhes-row.active { display: table-row; }
-    </style>
 </head>
-<body class="bg-slate-50 p-4">
+<body class="bg-slate-100 p-4 font-sans">
 
     <div class="max-w-7xl mx-auto">
-        <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800 tracking-tight">📊 Painel de Concorrência</h1>
-                <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Sincronizando...</div>
-            </div>
+        <header class="bg-white p-6 rounded-lg shadow-sm mb-6 border border-slate-200">
+            <h1 class="text-2xl font-black text-slate-800">📊 Painel de Diagnóstico</h1>
+            <p class="text-sm text-slate-500">Se travar, leia o log abaixo.</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <input type="text" id="filtro" placeholder="Buscar Órgão, Edital ou UASG..." class="p-4 rounded-xl border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Processos</p>
-                <div id="count" class="text-2xl font-black text-slate-700">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Volume Total</p>
-                <div id="totalFinanceiro" class="text-xl font-black text-emerald-600">R$ 0,00</div>
-            </div>
+        <div class="bg-slate-900 text-green-400 p-6 rounded-xl font-mono text-xs mb-6 shadow-lg overflow-y-auto max-h-60" id="console-log">
+            > Iniciando sistema...<br>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
             <table class="min-w-full">
-                <thead class="bg-slate-900 text-white text-[10px] uppercase tracking-wider font-bold">
+                <thead class="bg-slate-800 text-white text-[10px] uppercase font-bold">
                     <tr>
-                        <th class="px-6 py-4 text-left">Edital / UASG</th>
-                        <th class="px-6 py-4 text-left">Órgão / Local</th>
-                        <th class="px-6 py-4 text-right">Valor Total</th>
+                        <th class="px-6 py-4 text-left">Resumo do Edital</th>
+                        <th class="px-6 py-4 text-right">Valor</th>
                     </tr>
                 </thead>
-                <tbody id="corpo" class="text-sm divide-y divide-slate-100"></tbody>
+                <tbody id="corpo"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
-        <div class="loading w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest text-center px-4">Carregando base de dados...</p>
-    </div>
-
     <script>
-        let db = [];
+        // Função para escrever na caixa preta
+        function log(msg, tipo="info") {
+            const painel = document.getElementById('console-log');
+            const cor = tipo === "erro" ? "text-red-400 font-bold bg-red-900/30 p-1" : "text-green-400";
+            const icone = tipo === "erro" ? "❌" : "✅";
+            painel.innerHTML += `<div class="${cor} border-b border-slate-800 py-1">${icone} ${msg}</div>`;
+            painel.scrollTop = painel.scrollHeight;
+            console.log(msg);
+        }
 
         async function init() {
-            const statusEl = document.getElementById('status');
-            const spinnerEl = document.getElementById('spinner');
-            const spinnerText = document.getElementById('spinnerText');
-
             try {
-                spinnerText.innerText = "Baixando arquivo ZIP...";
-                const res = await fetch('dados_pncp.zip?v=' + Date.now());
-                if (!res.ok) throw new Error("Ficheiro dados_pncp.zip não encontrado.");
+                // Passo 1: Verificar JSZip
+                if (typeof JSZip === 'undefined') {
+                    throw new Error("A biblioteca JSZip não carregou. Verifique sua conexão.");
+                }
+                log("Biblioteca JSZip carregada com sucesso.");
 
-                const blob = await res.blob();
-                const zip = await JSZip.loadAsync(blob);
+                // Passo 2: Tentar baixar o arquivo
+                const url = 'dados_pncp.zip?v=' + Date.now();
+                log(`Tentando baixar arquivo de: ${url}... aguarde.`);
+                
+                const response = await fetch(url);
+                
+                log(`Resposta do Servidor: Status ${response.status} (${response.statusText})`);
 
-                // Busca profunda: encontra qualquer arquivo .json que contenha dados
-                const jsonFile = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.json') && !f.dir);
-                
-                if (!jsonFile) throw new Error("JSON não encontrado dentro do ZIP.");
-
-                spinnerText.innerText = "Extraindo conteúdo...";
-                
-                // --- CORREÇÃO DO TRAVAMENTO ---
-                // Lemos o arquivo direto. Não usamos regex "limpadora" pois ela corrompe o JSON do Python
-                let text = await jsonFile.async("string");
-                
-                try {
-                    db = JSON.parse(text);
-                } catch (jsonErr) {
-                    throw new Error("O arquivo JSON está corrompido. O robô precisa rodar novamente.");
+                if (!response.ok) {
+                    throw new Error(`Erro Fatal: O GitHub respondeu com erro ${response.status}. O arquivo não existe ou o link está errado.`);
                 }
 
-                spinnerEl.classList.add('hidden');
-                statusEl.innerText = "SISTEMA ONLINE";
-                statusEl.className = "mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 uppercase inline-block";
+                // Passo 3: Converter para Blob
+                const blob = await response.blob();
+                log(`Arquivo baixado! Tamanho: ${(blob.size / 1024).toFixed(2)} KB.`);
+
+                if (blob.size < 100) {
+                    throw new Error("O arquivo ZIP está vazio (quase 0 KB). O robô falhou ao criar o arquivo.");
+                }
+
+                // Passo 4: Abrir o ZIP
+                log("Tentando abrir o pacote ZIP...");
+                const zip = await JSZip.loadAsync(blob);
                 
+                // Listar arquivos dentro do ZIP
+                const arquivos = Object.keys(zip.files);
+                log(`Arquivos encontrados dentro do ZIP: [ ${arquivos.join(', ')} ]`);
+
+                // Passo 5: Achar o JSON
+                const jsonFileName = arquivos.find(nome => nome.toLowerCase().endsWith('.json'));
+                
+                if (!jsonFileName) {
+                    throw new Error("Nenhum arquivo .json encontrado dentro do pacote ZIP.");
+                }
+                log(`Arquivo alvo identificado: ${jsonFileName}`);
+
+                // Passo 6: Ler o JSON
+                log("Extraindo texto do JSON...");
+                let texto = await zip.file(jsonFileName).async("string");
+                log(`Texto extraído! Comprimento: ${texto.length} caracteres.`);
+
+                // Passo 7: Converter para Objeto
+                // Limpeza bruta para evitar erros de caracteres estranhos
+                texto = texto.replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, ""); 
+                
+                const db = JSON.parse(texto);
+                log(`Sucesso! ${db.length} licitações carregadas.`);
+
                 render(db);
 
-            } catch (e) {
-                console.error("Erro completo:", e);
-                statusEl.innerText = "FALHA";
-                spinnerEl.innerHTML = `
-                    <div class="bg-white p-8 rounded-2xl shadow-xl text-center border border-red-100 max-w-lg mx-4">
-                        <p class="text-red-500 font-black mb-2 text-lg">⚠️ ERRO DE PROCESSAMENTO</p>
-                        <p class="text-slate-600 text-xs mb-6 bg-slate-50 p-4 rounded font-mono text-left break-all">${e.message}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold uppercase text-xs shadow-lg shadow-blue-200">Recarregar Página</button>
-                    </div>`;
+            } catch (erro) {
+                log(erro.message, "erro");
+                alert("ERRO: " + erro.message);
             }
         }
 
         function render(dados) {
             const corpo = document.getElementById('corpo');
-            corpo.innerHTML = "";
-            let somaTotal = 0;
-
-            dados.forEach((lic, i) => {
-                try {
-                    const totalLic = lic.total_licitacao || 0;
-                    somaTotal += totalLic;
-
-                    const itensHtml = (lic.itens || []).map(it => `
-                        <div class="flex justify-between text-[11px] py-2 border-b border-slate-50 hover:bg-slate-50 transition">
-                            <span class="text-slate-600"><b class="text-slate-400 mr-2">#${it.item}</b> ${it.fornecedor || 'N/A'}</span>
-                            <span class="font-bold text-slate-800 font-mono">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</span>
-                        </div>
-                    `).join('');
-
-                    corpo.innerHTML += `
-                        <tr class="cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('d-${i}').classList.toggle('active')">
-                            <td class="px-6 py-5">
-                                <div class="font-black text-blue-600 text-sm">${lic.edital || 'S/N'}</div>
-                                <div class="text-[10px] font-mono text-slate-300">UASG: ${lic.uasg || '---'}</div>
-                            </td>
-                            <td class="px-6 py-5">
-                                <div class="font-bold text-slate-700 text-xs uppercase truncate w-64">${lic.orgao || 'Órgão não identificado'}</div>
-                                <div class="text-[10px] text-slate-400 font-medium">${lic.cidade || ''}/${lic.uf || ''}</div>
-                            </td>
-                            <td class="px-6 py-5 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
-                        </tr>
-                        <tr id="d-${i}" class="detalhes-row">
-                            <td colspan="3" class="p-6">
-                                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-inner">
-                                    <div class="flex justify-between items-center mb-4 border-b pb-2">
-                                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Vencedores por Item</h4>
-                                        <a href="${lic.link_edital}" target="_blank" class="text-[10px] bg-slate-900 text-white px-3 py-1 rounded font-bold uppercase hover:bg-slate-700 transition">Ver PNCP</a>
-                                    </div>
-                                    <div class="max-h-60 overflow-y-auto pr-2">${itensHtml || '<p class="text-slate-400 text-xs">Nenhum item detalhado encontrado.</p>'}</div>
-                                </div>
-                            </td>
-                        </tr>`;
-                } catch (err) { console.error("Erro na linha " + i, err); }
+            let html = "";
+            dados.slice(0, 50).forEach(d => {
+                html += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-blue-600 text-xs">${d.edital}</div>
+                            <div class="text-[10px] text-slate-500 uppercase">${d.orgao}</div>
+                        </td>
+                        <td class="px-6 py-4 text-right font-bold text-slate-700 text-xs">
+                            R$ ${(d.total_licitacao || 0).toLocaleString('pt-br')}
+                        </td>
+                    </tr>
+                `;
             });
-
-            document.getElementById('count').innerText = dados.length;
-            document.getElementById('totalFinanceiro').innerText = somaTotal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+            corpo.innerHTML = html;
+            log("Tabela desenhada na tela.");
         }
 
-        document.getElementById('filtro').addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            render(db.filter(d => 
-                (d.orgao || "").toLowerCase().includes(val) || 
-                (d.edital || "").toLowerCase().includes(val) ||
-                (d.uasg || "").includes(val)
-            ));
-        });
-
+        // Iniciar
         init();
     </script>
 </body>
