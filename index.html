@@ -22,10 +22,10 @@
         <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
             <div class="mb-4 md:mb-0">
                 <h1 class="text-3xl font-black text-slate-900 tracking-tight">📊 Painel de Concorrência</h1>
-                <p class="text-slate-500 font-medium text-sm">Monitoramento de Vencedores PNCP</p>
+                <p class="text-slate-500 font-medium text-sm">Base de Dados: <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-blue-600">dados_pncp.zip</span></p>
             </div>
             <div id="status" class="px-5 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-black border border-blue-100 uppercase tracking-widest shadow-sm">
-                Conectando...
+                Inicializando...
             </div>
         </header>
 
@@ -61,7 +61,7 @@
 
     <div id="spinner" class="fixed inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-50">
         <div class="loading w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mb-6"></div>
-        <p class="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Inicializando Sistema...</p>
+        <p class="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Processando ZIP...</p>
     </div>
 
     <script>
@@ -72,43 +72,43 @@
             const spinnerEl = document.getElementById('spinner');
 
             try {
-                // 1. Download do ZIP (com cache busting)
-                statusEl.innerText = "BAIXANDO DADOS...";
-                const res = await fetch('dados_pncp.zip?v=' + Date.now());
+                // 1. Download do ZIP (forçando ignorar o cache com Date.now)
+                statusEl.innerText = "LOCALIZANDO ZIP...";
+                const res = await fetch('dados_pncp.zip?v=' + Date.now(), { cache: 'no-store' });
                 
-                if (!res.ok) throw new Error(`Arquivo ZIP não encontrado (Erro ${res.status}). O robô ainda não finalizou a primeira coleta.`);
+                if (!res.ok) throw new Error(`O arquivo 'dados_pncp.zip' não foi encontrado no servidor (Erro ${res.status}). Verifique se o arquivo está no seu GitHub.`);
 
-                // 2. Abertura do ZIP
+                // 2. Extração usando JSZip
                 statusEl.innerText = "DESCOMPACTANDO...";
                 const blob = await res.blob();
                 const zip = await JSZip.loadAsync(blob);
 
-                // 3. Validação do JSON interno
+                // 3. Busca do JSON dentro do ZIP
                 const file = zip.file("dados_pncp.json");
-                if (!file) throw new Error("ZIP corrompido: Arquivo 'dados_pncp.json' não encontrado dentro do pacote.");
+                if (!file) throw new Error("O ZIP foi aberto, mas não encontrei 'dados_pncp.json' dentro dele.");
 
-                // 4. Leitura dos Dados
-                statusEl.innerText = "PROCESSANDO...";
+                // 4. Conversão para Objeto
+                statusEl.innerText = "LENDO DADOS...";
                 const text = await file.async("string");
                 db = JSON.parse(text);
 
-                // 5. Sucesso
+                // 5. Sucesso e Renderização
                 spinnerEl.classList.add('hidden');
-                statusEl.innerText = "SISTEMA ONLINE";
+                statusEl.innerText = "CONECTADO";
                 statusEl.className = "px-5 py-2 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100 uppercase tracking-widest shadow-sm";
                 render(db);
 
             } catch (e) {
-                console.error(e);
-                statusEl.innerText = "FALHA NA CONEXÃO";
+                console.error("Erro detalhado:", e);
+                statusEl.innerText = "FALHA";
                 statusEl.className = "px-5 py-2 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100 uppercase tracking-widest shadow-sm";
                 
                 spinnerEl.innerHTML = `
                     <div class="bg-white p-8 rounded-2xl shadow-xl text-center border-2 border-red-50 max-w-md mx-4">
                         <div class="text-red-500 text-6xl mb-4">⚠️</div>
-                        <h2 class="text-slate-900 font-black text-xl mb-2">Erro ao Carregar</h2>
-                        <p class="text-slate-500 text-sm mb-6 bg-slate-50 p-3 rounded text-left font-mono break-all border border-slate-100">${e.message}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-200">
+                        <h2 class="text-slate-900 font-black text-xl mb-2">Erro de Carregamento</h2>
+                        <p class="text-slate-500 text-sm mb-6 bg-slate-50 p-3 rounded font-mono break-all border border-slate-100">${e.message}</p>
+                        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg">
                             Tentar Novamente
                         </button>
                     </div>
@@ -119,59 +119,55 @@
         function render(dados) {
             const corpo = document.getElementById('corpo');
             corpo.innerHTML = "";
-            let total = 0;
+            let somaGlobal = 0;
 
             dados.forEach((lic, i) => {
-                const valorLicitacao = lic.total_licitacao || 0;
-                total += valorLicitacao;
+                const totalLic = (lic.total_licitacao || 0);
+                somaGlobal += totalLic;
 
-                // Agrupa itens por fornecedor
+                // Agrupamento por Fornecedor (Proteção contra dados antigos/vazios)
                 const grupos = (lic.itens || []).reduce((acc, it) => {
                     const f = it.fornecedor || "Desconhecido";
-                    if (!acc[f]) acc[f] = { items: [], total: 0, cnpj: it.cnpj, alvo: it.e_alvo };
+                    if (!acc[f]) acc[f] = { items: [], total: 0, cnpj: it.cnpj || '---', alvo: it.e_alvo || false };
                     acc[f].items.push(it);
                     acc[f].total += (it.total || 0);
                     return acc;
                 }, {});
 
-                // Gera HTML dos detalhes
-                const detalhesHtml = Object.entries(grupos)
+                // HTML dos Detalhes Agrupados
+                const htmlDetalhes = Object.entries(grupos)
                     .sort((a,b) => b[1].total - a[1].total)
                     .map(([nome, info]) => `
-                    <div class="mb-4 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                        <div class="bg-slate-50/80 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                            <span class="text-xs font-black ${info.alvo ? 'text-orange-600' : 'text-slate-700'} uppercase tracking-tight">
-                                ${nome} <span class="font-medium text-slate-400 ml-1">(${info.cnpj || ''})</span>
+                    <div class="mb-4 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-slate-50/80 px-4 py-3 border-b flex justify-between items-center">
+                            <span class="text-xs font-black ${info.alvo ? 'text-orange-600' : 'text-slate-700'} uppercase">
+                                ${nome} <span class="font-medium text-slate-400 ml-1">(${info.cnpj})</span>
                             </span>
-                            <span class="text-xs font-black text-slate-900 bg-white px-2 py-1 rounded border border-slate-200">
-                                R$ ${(info.total || 0).toLocaleString('pt-br')}
+                            <span class="text-xs font-black text-slate-900 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
+                                R$ ${info.total.toLocaleString('pt-br', {minimumFractionDigits: 2})}
                             </span>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto scroll-custom">
                             <table class="w-full text-[10px] text-left">
                                 <thead class="text-slate-400 bg-white border-b border-slate-50">
                                     <tr>
                                         <th class="p-2 font-medium w-16 text-center">Item</th>
                                         <th class="p-2 font-medium">Descrição</th>
-                                        <th class="p-2 font-medium text-center w-24">Data Homo.</th>
-                                        <th class="p-2 font-medium text-center w-16">Qtd</th>
-                                        <th class="p-2 font-medium text-right w-24">Unitário</th>
-                                        <th class="p-2 font-medium text-right w-24">Total</th>
+                                        <th class="p-2 font-medium text-center">Data Homo.</th>
+                                        <th class="p-2 font-medium text-center">Qtd</th>
+                                        <th class="p-2 font-medium text-right">Unitário</th>
+                                        <th class="p-2 font-medium text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50">
                                     ${info.items.map(it => `
-                                        <tr class="hover:bg-blue-50/30 transition-colors">
+                                        <tr class="hover:bg-blue-50/30">
                                             <td class="p-2 font-bold text-slate-400 text-center">#${it.item}</td>
-                                            <td class="p-2 text-slate-600 line-clamp-1">${it.desc}</td>
-                                            <td class="p-2 text-center text-slate-400 font-mono">${it.data_homo || '-'}</td>
+                                            <td class="p-2 text-slate-600">${it.desc}</td>
+                                            <td class="p-2 text-center text-slate-400 font-mono">${it.data_homo || '---'}</td>
                                             <td class="p-2 text-center font-bold text-slate-700">${it.qtd || 0}</td>
-                                            <td class="p-2 text-right text-slate-500 font-mono">
-                                                R$ ${(it.unitario || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}
-                                            </td>
-                                            <td class="p-2 text-right font-black text-slate-700">
-                                                R$ ${(it.total || 0).toLocaleString('pt-br')}
-                                            </td>
+                                            <td class="p-2 text-right text-slate-500 font-mono">R$ ${(it.unitario || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                                            <td class="p-2 text-right font-black text-slate-700">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -180,18 +176,63 @@
                     </div>
                 `).join('');
 
-                // Resumo para a linha principal
-                const resumo = Object.entries(grupos)
+                // Linha Principal
+                const topVenc = Object.entries(grupos)
                     .sort((a,b)=>b[1].total - a[1].total)
                     .slice(0,2)
-                    .map(([n,v])=>`<div class="text-[10px] text-slate-600 truncate w-48 mb-0.5">• <b>${n.substring(0,15)}...</b> R$ ${(v.total || 0).toLocaleString('pt-br')}</div>`)
+                    .map(([n,v])=>`<div class="text-[10px] text-slate-500 truncate w-56 mb-1">• <b>${n.substring(0,18)}:</b> R$ ${v.total.toLocaleString('pt-br')}</div>`)
                     .join('');
 
                 corpo.innerHTML += `
-                    <tr class="group cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-slate-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
+                    <tr class="cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-slate-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
                         <td class="px-6 py-5">
-                            <div class="font-black text-blue-600 text-sm group-hover:text-blue-700">${lic.edital}</div>
-                            <div class="text-[10px] font-mono text-slate-400 mt-1 bg-slate-100 inline-block px-1 rounded">UASG: ${lic.uasg || '---'}</div>
+                            <div class="font-black text-blue-600 text-sm">${lic.edital}</div>
+                            <div class="text-[10px] font-mono text-slate-400 mt-1 bg-slate-100 inline-block px-1.5 py-0.5 rounded italic">UASG: ${lic.uasg || '---'}</div>
                         </td>
                         <td class="px-6 py-5">
-                            <div class="font-bold text-slate-700 text-xs uppercase truncate w-56" title
+                            <div class="font-bold text-slate-700 text-xs uppercase truncate w-60" title="${lic.orgao}">${lic.orgao}</div>
+                            <div class="text-[10px] text-slate-400 flex items-center gap-1 mt-1 uppercase font-semibold tracking-tighter">
+                                ${lic.cidade || ''}/${lic.uf || ''}
+                            </div>
+                        </td>
+                        <td class="px-6 py-5">${topVenc || '<span class="text-slate-300 italic">Sem resultados</span>'}</td>
+                        <td class="px-6 py-5 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                    <tr id="d-${i}" class="detalhes-row">
+                        <td colspan="4" class="p-6 bg-slate-50 border-x border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Detalhes por Vencedor
+                                </h3>
+                                <a href="${lic.link_edital}" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md transition-all flex items-center gap-2">
+                                    Ver no PNCP ↗
+                                </a>
+                            </div>
+                            <div class="max-h-[550px] overflow-y-auto pr-2 scroll-custom">
+                                ${htmlDetalhes}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('count').innerText = dados.length;
+            document.getElementById('totalFinanceiro').innerText = somaGlobal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+        }
+
+        document.getElementById('filtro').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            const filtrados = db.filter(d => 
+                d.orgao.toLowerCase().includes(val) || 
+                d.edital.toLowerCase().includes(val) || 
+                (d.uasg || '').includes(val) ||
+                JSON.stringify(d.resumo || {}).toLowerCase().includes(val)
+            );
+            render(filtrados);
+        });
+
+        // Inicia a aplicação
+        window.onload = init;
+    </script>
+</body>
+</html>
