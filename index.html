@@ -3,60 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ranking PNCP - Detalhado</title>
+    <title>Ranking PNCP - Inteligência por Fornecedor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .loading { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .detalhes-row { display: none; background-color: #f9fafb; }
+        .detalhes-row { display: none; background-color: #f3f4f6; }
         .detalhes-row.active { display: table-row; }
+        .scroll-custom::-webkit-scrollbar { width: 6px; }
+        .scroll-custom::-webkit-scrollbar-track { background: #f1f1f1; }
+        .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-100 p-5">
+<body class="bg-slate-50 p-5">
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm">
+        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div>
-                <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">📊 Painel de Concorrência</h1>
-                <p class="text-gray-500 font-medium">Análise detalhada de vencedores por item (Fonte: ZIP/PNCP)</p>
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">📊 Inteligência de Mercado</h1>
+                <p class="text-slate-500 font-medium">Detalhamento Agrupado por Fornecedor (Fonte: ZIP/PNCP)</p>
             </div>
-            <div id="status" class="text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full bg-blue-100 text-blue-700 shadow-inner">
+            <div id="status" class="text-xs font-bold px-4 py-2 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                 Sincronizando...
             </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <input type="text" id="filtroGeral" placeholder="Órgão, Edital ou UASG..." class="md:col-span-2 p-4 border-none rounded-xl shadow-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-700">
-            <div class="bg-white p-4 rounded-xl shadow-md flex flex-col justify-center border-l-4 border-blue-500">
-                <span class="text-xs text-gray-400 uppercase font-bold">Processos</span>
-                <span id="totalProcessos" class="text-2xl font-black text-gray-800">0</span>
+            <input type="text" id="filtroGeral" placeholder="Filtrar Órgão, Edital, UASG ou Fornecedor..." class="md:col-span-2 p-4 border-none rounded-2xl shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700">
+            <div class="bg-white p-4 rounded-2xl shadow-md border-l-4 border-blue-500">
+                <span class="text-[10px] text-slate-400 uppercase font-black">Processos</span>
+                <div id="totalProcessos" class="text-2xl font-black text-slate-800">0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-md flex flex-col justify-center border-l-4 border-green-500">
-                <span class="text-xs text-gray-400 uppercase font-bold">Volume Total</span>
-                <span id="volumeFinanceiro" class="text-xl font-black text-green-600">R$ 0,00</span>
+            <div class="bg-white p-4 rounded-2xl shadow-md border-l-4 border-emerald-500">
+                <span class="text-[10px] text-slate-400 uppercase font-black">Valor Total em Tela</span>
+                <div id="volumeFinanceiro" class="text-xl font-black text-emerald-600">R$ 0,00</div>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
             <table class="min-w-full">
                 <thead>
-                    <tr class="bg-gray-800 text-white text-left text-xs uppercase font-bold">
+                    <tr class="bg-slate-800 text-white text-left text-[10px] uppercase font-bold tracking-widest">
                         <th class="px-6 py-4">Edital / UASG</th>
                         <th class="px-6 py-4">Órgão / Local</th>
                         <th class="px-6 py-4">Resumo Vencedores</th>
                         <th class="px-6 py-4 text-right">Valor Total</th>
-                        <th class="px-6 py-4 text-center">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="tabelaCorpo" class="divide-y divide-gray-100 text-sm">
+                <tbody id="tabelaCorpo" class="divide-y divide-slate-100 text-sm">
                     </tbody>
             </table>
         </div>
     </div>
 
-    <div id="spinner" class="fixed inset-0 flex flex-col items-center justify-center bg-white bg-opacity-90 z-50">
-        <div class="loading w-16 h-16 border-4 border-gray-200 rounded-full mb-4"></div>
-        <p class="text-gray-600 font-bold animate-pulse">Descompactando dados...</p>
+    <div id="spinner" class="fixed inset-0 flex flex-col items-center justify-center bg-slate-50 bg-opacity-95 z-50">
+        <div class="loading w-12 h-12 border-4 border-slate-200 rounded-full mb-4"></div>
+        <p class="text-slate-500 font-bold text-sm">Descompactando e Agrupando Dados...</p>
     </div>
 
     <script>
@@ -72,19 +74,26 @@
                 dadosCompletos = JSON.parse(jsonText);
                 
                 document.getElementById('spinner').classList.add('hidden');
-                document.getElementById('status').innerText = "ONLINE";
-                document.getElementById('status').className = "text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full bg-green-100 text-green-700 shadow-inner";
-                
+                document.getElementById('status').innerText = "BANCO ATUALIZADO";
                 renderizarTabela(dadosCompletos);
             } catch (error) {
                 console.error(error);
-                document.getElementById('status').innerText = "ERRO";
+                document.getElementById('status').innerText = "ERRO DE CARREGAMENTO";
             }
         }
 
         function toggleDetalhes(id) {
-            const row = document.getElementById('detalhe-' + id);
-            row.classList.toggle('active');
+            document.getElementById('detalhe-' + id).classList.toggle('active');
+        }
+
+        function agruparPorFornecedor(itens) {
+            return itens.reduce((acc, it) => {
+                const key = it.fornecedor || "Desconhecido";
+                if (!acc[key]) acc[key] = { items: [], total: 0, cnpj: it.cnpj, alvo: it.e_alvo };
+                acc[key].items.push(it);
+                acc[key].total += it.total;
+                return acc;
+            }, {});
         }
 
         function renderizarTabela(dados) {
@@ -96,82 +105,98 @@
                 const valorLicitacao = lic.total_licitacao || 0;
                 valorTotalGeral += valorLicitacao;
 
-                // Resumo dos top 2 fornecedores
+                const fornecedoresAgrupados = agruparPorFornecedor(lic.itens || []);
+                
+                // HTML dos Grupos por Fornecedor
+                let htmlAgrupado = "";
+                Object.entries(fornecedoresAgrupados).sort((a,b) => b[1].total - a[1].total).forEach(([nome, info]) => {
+                    htmlAgrupado += `
+                        <div class="mb-6 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <div class="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                                <div>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">Fornecedor</span>
+                                    <h5 class="text-sm font-black ${info.alvo ? 'text-orange-600' : 'text-slate-700'}">${nome} <small class="text-slate-400 font-normal ml-2">(${info.cnpj})</small></h5>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">Subtotal</span>
+                                    <div class="text-sm font-black text-slate-800">R$ ${info.total.toLocaleString('pt-br')}</div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-2">
+                                <table class="min-w-full text-[11px]">
+                                    <thead>
+                                        <tr class="text-slate-400 text-left border-b border-slate-100">
+                                            <th class="pb-1 w-12 text-center">Item</th>
+                                            <th class="pb-1">Descrição</th>
+                                            <th class="pb-1 text-center">Qtd</th>
+                                            <th class="pb-1 text-right">Unitário</th>
+                                            <th class="pb-1 text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        ${info.items.map(it => `
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="py-2 text-center font-bold text-slate-400">${it.item}</td>
+                                                <td class="py-2 text-slate-600">${it.desc}</td>
+                                                <td class="py-2 text-center font-medium">${it.qtd}</td>
+                                                <td class="py-2 text-right text-slate-500 italic">R$ ${(it.total / it.qtd).toLocaleString('pt-br', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                <td class="py-2 text-right font-bold text-slate-700">R$ ${it.total.toLocaleString('pt-br')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                });
+
                 const resumoVenc = Object.entries(lic.resumo || {})
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 2)
-                    .map(([nome, valor]) => `<div class='text-[10px] truncate max-w-[180px]'>• ${nome}: <b>R$ ${valor.toLocaleString('pt-br')}</b></div>`)
+                    .map(([nome, valor]) => `<div class='text-[10px] truncate max-w-[200px]'>• ${nome}: <b>R$ ${valor.toLocaleString('pt-br')}</b></div>`)
                     .join("");
 
-                // Detalhamento de Itens (O que estava faltando)
-                const listaItens = (lic.itens || []).map(it => `
-                    <div class="grid grid-cols-12 gap-2 py-2 border-b border-gray-100 items-center hover:bg-white transition">
-                        <div class="col-span-1 font-bold text-gray-400 text-center">#${it.item}</div>
-                        <div class="col-span-5 text-xs text-gray-600">${it.desc}</div>
-                        <div class="col-span-4 text-xs">
-                            <span class="${it.e_alvo ? 'bg-orange-100 text-orange-700 px-1 font-bold' : 'text-gray-700'}">
-                                ${it.fornecedor}
-                            </span>
-                            <div class="text-[9px] text-gray-400">${it.cnpj}</div>
-                        </div>
-                        <div class="col-span-2 text-right font-mono font-bold text-gray-700">
-                            R$ ${it.total.toLocaleString('pt-br')}
-                        </div>
-                    </div>
-                `).join("");
-
-                const linhaPrincipal = `
-                    <tr class="cursor-pointer hover:bg-blue-50 transition-colors" onclick="toggleDetalhes(${index})">
+                corpo.innerHTML += `
+                    <tr class="cursor-pointer hover:bg-slate-50 transition-all" onclick="toggleDetalhes(${index})">
                         <td class="px-6 py-5">
-                            <div class="font-black text-blue-700">${lic.edital}</div>
-                            <div class="text-[10px] font-mono text-gray-400">${lic.uasg || ''}</div>
+                            <div class="font-black text-blue-600 text-base">${lic.edital}</div>
+                            <div class="text-[10px] font-mono text-slate-400">UASG: ${lic.uasg || '---'}</div>
                         </td>
                         <td class="px-6 py-5">
-                            <div class="font-bold text-gray-800 uppercase text-xs">${lic.orgao}</div>
-                            <div class="text-gray-400 text-[10px]">${lic.cidade || ''} - ${lic.uf || ''}</div>
+                            <div class="font-bold text-slate-700 uppercase text-xs">${lic.orgao}</div>
+                            <div class="text-slate-400 text-[10px]">${lic.cidade || ''} - ${lic.uf || ''}</div>
                         </td>
                         <td class="px-6 py-5">${resumoVenc}</td>
-                        <td class="px-6 py-5 text-right font-black text-gray-800">R$ ${valorLicitacao.toLocaleString('pt-br')}</td>
-                        <td class="px-6 py-5 text-center">
-                            <button class="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-gray-500">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                        </td>
+                        <td class="px-6 py-5 text-right font-black text-slate-800 text-base">R$ ${valorLicitacao.toLocaleString('pt-br')}</td>
                     </tr>
                     <tr id="detalhe-${index}" class="detalhes-row">
-                        <td colspan="5" class="px-8 py-6">
-                            <div class="bg-white border rounded-xl p-4 shadow-inner">
-                                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                                    <h4 class="font-black text-gray-700 uppercase text-xs">🔍 Detalhamento por Item</h4>
-                                    <a href="${lic.link_edital}" target="_blank" class="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-bold hover:bg-blue-700">Ver PNCP Oficial</a>
-                                </div>
-                                <div class="max-h-64 overflow-y-auto pr-2">
-                                    <div class="grid grid-cols-12 gap-2 mb-2 text-[10px] font-black text-gray-400 uppercase">
-                                        <div class="col-span-1 text-center">Item</div>
-                                        <div class="col-span-5">Descrição</div>
-                                        <div class="col-span-4">Vencedor</div>
-                                        <div class="col-span-2 text-right">Valor Total</div>
-                                    </div>
-                                    ${listaItens}
-                                </div>
+                        <td colspan="4" class="px-8 py-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="text-base font-black text-slate-800 flex items-center">
+                                    <span class="w-2 h-6 bg-blue-500 mr-3 rounded-full"></span>
+                                    DETALHAMENTO POR VENCEDOR
+                                </h4>
+                                <a href="${lic.link_edital}" target="_blank" class="text-[10px] bg-slate-800 text-white px-4 py-2 rounded-lg font-black hover:bg-slate-700 uppercase tracking-widest">Acessar PNCP</a>
+                            </div>
+                            <div class="max-h-[500px] overflow-y-auto pr-4 scroll-custom">
+                                ${htmlAgrupado}
                             </div>
                         </td>
                     </tr>
                 `;
-                corpo.innerHTML += linhaPrincipal;
             });
 
             document.getElementById('totalProcessos').innerText = dados.length;
             document.getElementById('volumeFinanceiro').innerText = valorTotalGeral.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
         }
 
-        // Filtro Geral (Órgão, Edital ou UASG)
         document.getElementById('filtroGeral').addEventListener('input', (e) => {
             const busca = e.target.value.toLowerCase();
             const filtrados = dadosCompletos.filter(d => 
                 d.orgao.toLowerCase().includes(busca) || 
                 d.edital.toLowerCase().includes(busca) ||
-                (d.uasg || '').toLowerCase().includes(busca)
+                (d.uasg || '').toLowerCase().includes(busca) ||
+                JSON.stringify(d.resumo).toLowerCase().includes(busca)
             );
             renderizarTabela(filtrados);
         });
