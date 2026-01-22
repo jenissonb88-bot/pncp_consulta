@@ -74,13 +74,17 @@
                 
                 if (!jsonFile) throw new Error("JSON não encontrado dentro do ZIP.");
 
-                spinnerText.innerText = "Extraindo e validando conteúdo...";
+                spinnerText.innerText = "Extraindo conteúdo...";
+                
+                // --- CORREÇÃO DO TRAVAMENTO ---
+                // Lemos o arquivo direto. Não usamos regex "limpadora" pois ela corrompe o JSON do Python
                 let text = await jsonFile.async("string");
                 
-                // Limpeza de caracteres especiais que podem corromper o parse
-                text = text.replace(/[^\x20-\x7E\xA0-\xFF]/g, ""); 
-                
-                db = JSON.parse(text);
+                try {
+                    db = JSON.parse(text);
+                } catch (jsonErr) {
+                    throw new Error("O arquivo JSON está corrompido. O robô precisa rodar novamente.");
+                }
 
                 spinnerEl.classList.add('hidden');
                 statusEl.innerText = "SISTEMA ONLINE";
