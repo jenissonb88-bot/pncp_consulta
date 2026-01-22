@@ -2,7 +2,6 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Inteligente PNCP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,34 +12,34 @@
         .detalhes-row.active { display: table-row; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 p-4 font-sans">
+<body class="bg-slate-50 p-4">
 
     <div class="max-w-7xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
             <div>
                 <h1 class="text-2xl font-black text-slate-800 tracking-tight">📊 Painel de Concorrência</h1>
-                <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Sincronizando...</div>
+                <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Inicializando...</div>
             </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <input type="text" id="filtro" placeholder="Buscar Órgão, Edital ou UASG..." class="p-4 rounded-xl border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="text" id="filtro" placeholder="Buscar Órgão ou Edital..." class="p-4 rounded-xl border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
                 <p class="text-[10px] uppercase font-bold text-slate-400">Processos</p>
                 <div id="count" class="text-2xl font-black text-slate-700">0</div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Total Analisado</p>
-                <div id="totalFinanceiro" class="text-xl font-black text-emerald-600">R$ 0,00</div>
+                <p class="text-[10px] uppercase font-bold text-slate-400">Volume Total</p>
+                <div id="totalFinanceiro" class="text-2xl font-black text-emerald-600">R$ 0,00</div>
             </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
             <table class="min-w-full">
-                <thead class="bg-slate-900 text-white text-[10px] uppercase tracking-wider font-bold">
+                <thead class="bg-slate-900 text-white text-[10px] uppercase font-bold">
                     <tr>
                         <th class="px-6 py-4 text-left">Edital / UASG</th>
-                        <th class="px-6 py-4 text-left">Órgão / Local</th>
+                        <th class="px-6 py-4 text-left">Órgão</th>
                         <th class="px-6 py-4 text-right">Valor Total</th>
                     </tr>
                 </thead>
@@ -50,8 +49,8 @@
     </div>
 
     <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
-        <div class="loading w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest">Processando base de dados...</p>
+        <div class="loading w-12 h-12 border-4 border-slate-200 rounded-full mb-4"></div>
+        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest text-center">A carregar dados...</p>
     </div>
 
     <script>
@@ -63,20 +62,20 @@
             const spinnerText = document.getElementById('spinnerText');
 
             try {
-                spinnerText.innerText = "Descarregando ZIP...";
-                const res = await fetch('dados_pncp.zip?v=' + Date.now(), { cache: 'no-store' });
-                if (!res.ok) throw new Error("Ficheiro dados_pncp.zip não encontrado no servidor.");
+                spinnerText.innerText = "Baixando banco de dados (ZIP)...";
+                const res = await fetch('dados_pncp.zip?v=' + Date.now());
+                if (!res.ok) throw new Error("Arquivo 'dados_pncp.zip' não encontrado no servidor.");
 
                 const blob = await res.blob();
                 const zip = await JSZip.loadAsync(blob);
 
-                // Procura por qualquer ficheiro JSON dentro do ZIP, ignorando pastas
-                const jsonFile = Object.values(zip.files).find(f => f.name.endsWith('.json') && !f.dir);
+                // BUSCA PROFUNDA: Procura qualquer arquivo .json dentro de qualquer pasta do ZIP
+                const jsonFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.json'));
                 
-                if (!jsonFile) throw new Error("Não foi encontrado o ficheiro JSON dentro do ZIP.");
+                if (!jsonFileName) throw new Error("Não foi encontrado nenhum arquivo JSON dentro do ZIP.");
 
-                spinnerText.innerText = "Extraindo dados...";
-                const text = await jsonFile.async("string");
+                spinnerText.innerText = "Extraindo e formatando dados...";
+                const text = await zip.file(jsonFileName).async("string");
                 db = JSON.parse(text);
 
                 spinnerEl.classList.add('hidden');
@@ -87,12 +86,12 @@
 
             } catch (e) {
                 console.error(e);
-                statusEl.innerText = "ERRO DE CARREGAMENTO";
+                statusEl.innerText = "FALHA NO CARREGAMENTO";
                 spinnerEl.innerHTML = `
-                    <div class="bg-white p-8 rounded-2xl shadow-xl text-center border border-red-100 max-w-sm">
-                        <p class="text-red-500 font-black mb-2 text-lg">⚠️ FALHA</p>
-                        <p class="text-slate-500 text-xs mb-6">${e.message}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Recarregar</button>
+                    <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-sm border border-red-100">
+                        <p class="text-red-500 font-black mb-4">ERRO</p>
+                        <p class="text-slate-500 text-[10px] mb-4 font-mono break-all text-left bg-slate-50 p-2">${e.message}</p>
+                        <button onclick="location.reload()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">Tentar Novamente</button>
                     </div>`;
             }
         }
@@ -100,46 +99,40 @@
         function render(dados) {
             const corpo = document.getElementById('corpo');
             corpo.innerHTML = "";
-            let somaTotal = 0;
+            let soma = 0;
 
             dados.forEach((lic, i) => {
                 const totalLic = lic.total_licitacao || 0;
-                somaTotal += totalLic;
-
+                soma += totalLic;
+                
                 const itensHtml = (lic.itens || []).map(it => `
-                    <div class="flex justify-between text-[11px] py-1 border-b border-slate-50">
-                        <span class="text-slate-600"><b class="text-slate-400">#${it.item}</b> ${it.fornecedor}</span>
-                        <span class="font-bold text-slate-700 font-mono">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</span>
+                    <div class="flex justify-between text-[11px] border-b border-slate-50 py-2 hover:bg-slate-50">
+                        <span class="text-slate-600"><b class="text-slate-400 mr-2">#${it.item}</b> ${it.fornecedor}</span>
+                        <span class="font-bold text-slate-800">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</span>
                     </div>
                 `).join('');
 
                 corpo.innerHTML += `
                     <tr class="cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('d-${i}').classList.toggle('active')">
-                        <td class="px-6 py-5">
-                            <div class="font-black text-blue-600 text-sm">${lic.edital}</div>
-                            <div class="text-[10px] font-mono text-slate-300">UASG: ${lic.uasg || '---'}</div>
-                        </td>
-                        <td class="px-6 py-5">
-                            <div class="font-bold text-slate-700 text-xs uppercase">${lic.orgao}</div>
-                            <div class="text-[10px] text-slate-400">${lic.cidade || ''}/${lic.uf || ''}</div>
-                        </td>
-                        <td class="px-6 py-5 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                        <td class="px-6 py-4 font-bold text-blue-600">${lic.edital}<div class="text-[10px] text-slate-300 font-normal">UASG: ${lic.uasg || '---'}</div></td>
+                        <td class="px-6 py-4"><div class="font-bold text-slate-700 uppercase text-xs">${lic.orgao}</div><div class="text-[10px] text-slate-400 font-medium">${lic.cidade || ''}/${lic.uf || ''}</div></td>
+                        <td class="px-6 py-4 text-right font-black text-slate-700">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
                     </tr>
                     <tr id="d-${i}" class="detalhes-row">
                         <td colspan="3" class="p-6">
-                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens Homologados</h4>
-                                    <a href="${lic.link_edital}" target="_blank" class="text-[10px] bg-slate-800 text-white px-3 py-1 rounded font-bold uppercase hover:bg-slate-700">Ver PNCP</a>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-inner">
+                                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Detalhamento de Vencedores</h4>
+                                    <a href="${lic.link_edital}" target="_blank" class="text-[10px] bg-slate-900 text-white px-3 py-1 rounded font-bold uppercase hover:bg-slate-800">Ver PNCP</a>
                                 </div>
-                                <div class="max-h-60 overflow-y-auto pr-2">${itensHtml}</div>
+                                <div class="max-h-60 overflow-y-auto pr-2 custom-scroll">${itensHtml}</div>
                             </div>
                         </td>
                     </tr>`;
             });
 
             document.getElementById('count').innerText = dados.length;
-            document.getElementById('totalFinanceiro').innerText = somaTotal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+            document.getElementById('totalFinanceiro').innerText = soma.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
         }
 
         document.getElementById('filtro').addEventListener('input', (e) => {
