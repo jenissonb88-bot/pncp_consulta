@@ -16,7 +16,7 @@ CNPJ_ALVO = "08778201000126"   # DROGAFONTE
 DATA_LIMITE_FINAL = datetime.now()
 DIAS_POR_CICLO = 1             
 MAX_WORKERS = 20               
-ARQ_ZIP = 'dados_pncp.zip'     # Arquivo compactado para o GitHub
+ARQ_ZIP = 'dados_pncp.zip'     
 ARQ_JSON_INTERNO = 'dados_pncp.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
@@ -36,7 +36,6 @@ def criar_sessao():
     return session
 
 def carregar_banco():
-    """Lê os dados diretamente de dentro do arquivo ZIP."""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
@@ -48,16 +47,12 @@ def carregar_banco():
     return {}
 
 def salvar_estado(banco, data_proxima):
-    """Gera o JSON, compacta em ZIP e deleta o JSON para economizar espaço."""
-    # 1. Salva o JSON temporário
     with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
     
-    # 2. Cria o ZIP
     with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.write(ARQ_JSON_INTERNO)
     
-    # 3. Remove o JSON pesado
     if os.path.exists(ARQ_JSON_INTERNO):
         os.remove(ARQ_JSON_INTERNO)
         
@@ -108,7 +103,7 @@ def run():
 
     banco_total = carregar_banco()
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 📊 RANKING ZIP: Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 📊 RANKING: Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
@@ -118,26 +113,38 @@ def run():
         resp = session.get(url, params=params, timeout=30)
         if resp.status_code != 200: break
         
-        data = resp.json().get('data', [])
-        if not data: break
+        data_json = resp.json()
+        lics = data_json.get('data', [])
+        if not lics: break
 
-        for lic in data:
-            cnpj_org = lic.get('orgaoEntidade', {}).get('cnpj')
-            ano, seq = lic.get('anoCompra'), lic.get('sequencialCompra')
+        for lic in lics:
+            # --- CORREÇÃO DO LINK AQUI ---
+            cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
+            cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
+            
+            ano = lic.get('anoCompra')
+            seq = lic.get('sequencialCompra')
             uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
             id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
             
+            # Gera o link oficial formatado para o portal
+            link_pncp = f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}"
+            
             todos_itens = []
-            url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
+            url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org_limpo}/compras/{ano}/{seq}/itens"
             p_it = 1
             while True:
-                r_it = session.get(url_itens, params={'pagina': p_it, 'tamanhoPagina': 1000}, timeout=20)
-                if r_it.status_code != 200: break
-                lote = r_it.json()
-                if not lote: break
-                todos_itens.extend(lote)
-                if len(lote) < 1000: break
-                p_it += 1
+                try:
+                    r_it = session.get(url_itens, params={'pagina': p_it, 'tamanhoPagina': 1000}, timeout=20)
+                    if r_it.status_code != 200: break
+                    lote = r_it.json()
+                    if not lote: break
+                    todos_itens.extend(lote)
+                    if len(lote) < 1000: break
+                    p_it += 1
+                except: break
+
+            if not todos_itens: continue
 
             itens_ranking = []
             resumo = {}
@@ -156,13 +163,16 @@ def run():
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
                     "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
+                    "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
+                    "uasg": uasg,
+                    "link_edital": link_pncp, # Link corrigido salvo no banco
                     "itens": itens_ranking,
                     "resumo": resumo,
                     "total_licitacao": sum(resumo.values())
                 }
                 print("✅", end="", flush=True)
 
-        if pagina >= resp.json().get('totalPaginas', 1): break
+        if pagina >= data_json.get('totalPaginas', 1): break
         pagina += 1
 
     salvar_estado(banco_total, data_atual + timedelta(days=1))
