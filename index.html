@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Ranking Inteligente PNCP</title>
+    <title>Ranking PNCP - Filtros Avançados</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -10,27 +10,46 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .detalhes-row { display: none; background-color: #f8fafc; }
         .detalhes-row.active { display: table-row; }
+        .input-filtro { @apply p-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-full; }
     </style>
 </head>
-<body class="bg-slate-50 p-4 font-sans">
+<body class="bg-slate-50 p-4 font-sans antialiased text-slate-800">
 
     <div class="max-w-7xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
             <div>
-                <h1 class="text-2xl font-black text-slate-800 tracking-tight">📊 Painel de Concorrência</h1>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">📊 Inteligência de Mercado</h1>
                 <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Sincronizando...</div>
+            </div>
+            <div class="text-right hidden md:block">
+                <p class="text-[10px] uppercase font-bold text-slate-400">Total na Base</p>
+                <div id="count" class="text-xl font-black text-slate-700">0</div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <input type="text" id="filtro" placeholder="Buscar Órgão, Edital ou UASG..." class="p-4 rounded-xl border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Total de Processos</p>
-                <div id="count" class="text-2xl font-black text-slate-700">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Volume Financeiro</p>
-                <div id="totalFinanceiro" class="text-xl font-black text-emerald-600">R$ 0,00</div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-slate-200">
+            <h2 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Filtros de Pesquisa</h2>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Edital</label>
+                    <input type="text" id="fEdital" placeholder="Ex: 052/2024" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                </div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">UASG / Código</label>
+                    <input type="text" id="fUasg" placeholder="Ex: 332000" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                </div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Fornecedor (Vencedor)</label>
+                    <input type="text" id="fFornecedor" placeholder="Nome ou CNPJ" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                </div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Cidade</label>
+                    <input type="text" id="fCidade" placeholder="Nome da cidade" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full">
+                </div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Estado (UF)</label>
+                    <input type="text" id="fUf" placeholder="Ex: MA, SP" maxlength="2" class="input-filtro p-2 rounded-lg border border-slate-200 text-xs w-full uppercase">
+                </div>
             </div>
         </div>
 
@@ -39,137 +58,150 @@
                 <thead class="bg-slate-900 text-white text-[10px] uppercase tracking-wider font-bold">
                     <tr>
                         <th class="px-6 py-4 text-left">Edital / UASG</th>
-                        <th class="px-6 py-4 text-left">Órgão / Local</th>
+                        <th class="px-6 py-4 text-left">Órgão / Localidade</th>
                         <th class="px-6 py-4 text-right">Valor Total</th>
                     </tr>
                 </thead>
                 <tbody id="corpo" class="text-sm divide-y divide-slate-100"></tbody>
             </table>
         </div>
+
+        <div class="mt-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <button id="btnPrev" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-30">Anterior</button>
+            <div class="text-center">
+                <span id="pageInfo" class="text-xs font-bold text-slate-500 uppercase tracking-widest">Página 1 de 1</span>
+                <div id="totalVolume" class="text-[10px] text-emerald-600 font-black mt-1">R$ 0,00 (Total Filtrado)</div>
+            </div>
+            <button id="btnNext" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-30">Próxima</button>
+        </div>
     </div>
 
     <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
         <div class="loading w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest text-center px-4">Carregando...</p>
-        <p id="debugText" class="text-slate-400 font-mono text-[10px] mt-2"></p>
+        <p class="text-slate-500 font-bold text-xs uppercase tracking-widest">Carregando Filtros Avançados...</p>
     </div>
 
     <script>
-        let db = [];
+        let fullData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const itemsPerPage = 25; // Conforme solicitado
 
         async function init() {
             const statusEl = document.getElementById('status');
             const spinnerEl = document.getElementById('spinner');
-            const spinnerText = document.getElementById('spinnerText');
-            const debugText = document.getElementById('debugText');
 
             try {
-                // 1. Download
-                spinnerText.innerText = "Baixando base de dados...";
-                debugText.innerText = "Conectando ao GitHub...";
                 const res = await fetch('dados_pncp.zip?v=' + Date.now());
-                
-                if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+                if (!res.ok) throw new Error("Base de dados não encontrada.");
 
-                // 2. Abrir ZIP
-                spinnerText.innerText = "Descompactando...";
                 const blob = await res.blob();
-                debugText.innerText = `Tamanho do arquivo: ${(blob.size/1024).toFixed(2)} KB`;
-                
                 const zip = await JSZip.loadAsync(blob);
-
-                // 3. Encontrar JSON (Lógica Universal: Pega o primeiro .json que não for pasta)
-                debugText.innerText = "Localizando arquivo interno...";
                 const jsonFile = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.json') && !f.dir);
-                
-                if (!jsonFile) throw new Error("O arquivo ZIP foi baixado, mas não contém nenhum arquivo .json válido.");
-
-                // 4. Ler JSON
-                spinnerText.innerText = "Processando dados...";
-                debugText.innerText = `Lendo: ${jsonFile.name}`;
-                
                 const text = await jsonFile.async("string");
                 
-                // Parse direto (sem regex que trava o navegador)
-                try {
-                    db = JSON.parse(text);
-                } catch (e) {
-                    throw new Error("O arquivo JSON está corrompido ou incompleto. Aguarde o robô finalizar a próxima rodada.");
-                }
+                fullData = JSON.parse(text);
+                filteredData = [...fullData];
 
-                // 5. Sucesso
                 spinnerEl.classList.add('hidden');
-                statusEl.innerText = "SISTEMA ONLINE";
-                statusEl.className = "mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase inline-block";
+                statusEl.innerText = "ONLINE";
+                statusEl.className = "mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 uppercase inline-block";
                 
-                render(db);
+                document.getElementById('count').innerText = fullData.length;
+                applyFilters();
 
             } catch (e) {
-                console.error(e);
-                statusEl.innerText = "FALHA";
-                spinnerEl.innerHTML = `
-                    <div class="bg-white p-8 rounded-2xl shadow-xl text-center border border-red-100 max-w-lg mx-4">
-                        <p class="text-red-500 font-black mb-2 text-lg">⚠️ ERRO</p>
-                        <p class="text-slate-600 text-xs mb-6 bg-slate-50 p-4 rounded font-mono text-left break-all">${e.message}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold uppercase text-xs shadow-lg">Tentar Novamente</button>
-                    </div>`;
+                spinnerEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold">${e.message}</div>`;
             }
         }
 
-        function render(dados) {
-            const corpo = document.getElementById('corpo');
-            corpo.innerHTML = "";
-            let somaTotal = 0;
+        function applyFilters() {
+            const edital = document.getElementById('fEdital').value.toLowerCase();
+            const uasg = document.getElementById('fUasg').value.toLowerCase();
+            const fornecedor = document.getElementById('fFornecedor').value.toLowerCase();
+            const cidade = document.getElementById('fCidade').value.toLowerCase();
+            const uf = document.getElementById('fUf').value.toLowerCase();
 
-            dados.forEach((lic, i) => {
-                // Proteção contra dados nulos
+            filteredData = fullData.filter(d => {
+                // Checa fornecedores no resumo (nomes dos vencedores)
+                const matchFornecedor = !fornecedor || Object.keys(d.resumo || {}).some(name => name.toLowerCase().includes(fornecedor));
+                
+                return (
+                    (d.edital || "").toLowerCase().includes(edital) &&
+                    (d.uasg || "").toLowerCase().includes(uasg) &&
+                    (d.cidade || "").toLowerCase().includes(cidade) &&
+                    (d.uf || "").toLowerCase().includes(uf) &&
+                    matchFornecedor
+                );
+            });
+
+            currentPage = 1;
+            
+            // Atualiza Volume Total Filtrado
+            let totalVal = filteredData.reduce((acc, curr) => acc + (curr.total_licitacao || 0), 0);
+            document.getElementById('totalVolume').innerText = totalVal.toLocaleString('pt-br', {style:'currency', currency:'BRL'}) + " (Total Filtrado)";
+            
+            renderPage();
+        }
+
+        function renderPage() {
+            const corpo = document.getElementById('corpo');
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            let html = "";
+            pageData.forEach((lic, i) => {
                 const totalLic = lic.total_licitacao || 0;
-                somaTotal += totalLic;
+                const idx = start + i;
 
                 const itensHtml = (lic.itens || []).map(it => `
-                    <div class="flex justify-between text-[11px] py-2 border-b border-slate-50 hover:bg-slate-50 transition">
-                        <span class="text-slate-600 w-2/3 truncate"><b class="text-slate-400 mr-2">#${it.item}</b> ${it.fornecedor || 'Fornecedor N/A'}</span>
-                        <span class="font-bold text-slate-800 font-mono">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</span>
+                    <div class="flex justify-between text-[10px] py-1 border-b border-slate-50 hover:bg-slate-50">
+                        <span class="text-slate-600 w-2/3 truncate">#${it.item} - ${it.fornecedor}</span>
+                        <span class="font-bold text-slate-800">R$ ${(it.total || 0).toLocaleString('pt-br')}</span>
                     </div>
                 `).join('');
 
-                corpo.innerHTML += `
-                    <tr class="cursor-pointer hover:bg-blue-50 transition-colors group" onclick="document.getElementById('d-${i}').classList.toggle('active')">
-                        <td class="px-6 py-5">
-                            <div class="font-black text-blue-600 text-sm group-hover:text-blue-700">${lic.edital || 'S/N'}</div>
-                            <div class="text-[10px] font-mono text-slate-300">UASG: ${lic.uasg || '---'}</div>
+                html += `
+                    <tr class="cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('d-${idx}').classList.toggle('active')">
+                        <td class="px-6 py-4">
+                            <div class="font-black text-blue-600 text-sm">${lic.edital || 'S/N'}</div>
+                            <div class="text-[9px] font-mono text-slate-400">UASG: ${lic.uasg || '---'}</div>
                         </td>
-                        <td class="px-6 py-5">
-                            <div class="font-bold text-slate-700 text-xs uppercase truncate w-64" title="${lic.orgao}">${lic.orgao || 'Órgão Desconhecido'}</div>
-                            <div class="text-[10px] text-slate-400 font-medium">${lic.cidade || ''}/${lic.uf || ''}</div>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-700 text-xs uppercase truncate w-64">${lic.orgao || 'N/A'}</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">${lic.cidade || ''} / ${lic.uf || ''}</div>
                         </td>
-                        <td class="px-6 py-5 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                        <td class="px-6 py-4 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
                     </tr>
-                    <tr id="d-${i}" class="detalhes-row">
-                        <td colspan="3" class="p-6 bg-slate-50/50 shadow-inner">
-                            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Vencedores Detalhados</h4>
-                                    <a href="${lic.link_edital}" target="_blank" class="text-[10px] bg-slate-900 text-white px-3 py-1 rounded font-bold uppercase hover:bg-slate-700 transition shadow-lg">Ver no PNCP ↗</a>
+                    <tr id="d-${idx}" class="detalhes-row">
+                        <td colspan="3" class="p-4 bg-slate-50/50">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
+                                <div class="flex justify-between items-center mb-2 border-b pb-1">
+                                    <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Itens Homologados</h4>
+                                    <a href="${lic.link_edital}" target="_blank" class="text-[9px] bg-slate-900 text-white px-2 py-1 rounded font-bold uppercase">Ver PNCP</a>
                                 </div>
-                                <div class="max-h-60 overflow-y-auto pr-2 scroll-smooth">${itensHtml || '<p class="text-slate-400 text-center text-xs py-4">Nenhum detalhe disponível.</p>'}</div>
+                                <div class="max-h-48 overflow-y-auto pr-1">${itensHtml}</div>
                             </div>
                         </td>
                     </tr>`;
             });
 
-            document.getElementById('count').innerText = dados.length;
-            document.getElementById('totalFinanceiro').innerText = somaTotal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+            corpo.innerHTML = html || '<tr><td colspan="3" class="p-10 text-center text-slate-400 italic">Nenhum resultado encontrado para estes filtros.</td></tr>';
+            
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+            document.getElementById('pageInfo').innerText = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('btnPrev').disabled = currentPage === 1;
+            document.getElementById('btnNext').disabled = (currentPage === totalPages || filteredData.length === 0);
         }
 
-        document.getElementById('filtro').addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            render(db.filter(d => 
-                (d.orgao || "").toLowerCase().includes(val) || 
-                (d.edital || "").toLowerCase().includes(val) ||
-                (d.uasg || "").includes(val)
-            ));
+        // Listeners para os novos filtros
+        ['fEdital', 'fUasg', 'fFornecedor', 'fCidade', 'fUf'].forEach(id => {
+            document.getElementById(id).addEventListener('input', applyFilters);
         });
+
+        document.getElementById('btnPrev').onclick = () => { if(currentPage > 1) { currentPage--; renderPage(); window.scrollTo({top: 0, behavior: 'smooth'}); } };
+        document.getElementById('btnNext').onclick = () => { if(currentPage < Math.ceil(filteredData.length / itemsPerPage)) { currentPage++; renderPage(); window.scrollTo({top: 0, behavior: 'smooth'}); } };
 
         init();
     </script>
