@@ -2,11 +2,9 @@ name: 📊 Robô PNCP Ranking Automático
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Varredura de segurança a cada 2 horas
-  workflow_dispatch:        # Permite rodar manualmente
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
 
-# --- LÓGICA DE FILA INDIANA ---
-# Impede que dois robôs rodem ao mesmo tempo, mas coloca o novo na espera.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -18,7 +16,7 @@ jobs:
 
     permissions:
       contents: write
-      actions: write  # Essencial para o auto-reinício
+      actions: write
 
     env:
       TZ: 'America/Sao_Paulo'
@@ -39,9 +37,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests urllib3
 
-      - name: 🔄 4. Sincronizar e Executar Coleta
+      - name: 🔄 4. Executar Coleta
         run: |
-          # Puxa mudanças caso o robô anterior tenha acabado de salvar algo
           git pull origin main --rebase || echo "Sync OK"
           python coleta_pncp.py
 
@@ -50,14 +47,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 📤 6. Commit e Push
+      - name: 📤 6. Commit e Push (ZIP)
         run: |
-          # Adiciona os arquivos específicos do Ranking
-          git add dados_pncp.json checkpoint.txt
-          TIMESTAMP=$(date '+%d/%m %H:%M')
-          git commit -m "📊 RANKING: Atualizado | $TIMESTAMP" || echo "Sem mudanças"
+          # Remove o JSON do rastreamento caso ele tenha ficado preso no erro anterior
+          git rm --cached dados_pncp.json || echo "Arquivo limpo"
           
-          # Tenta o push com rebase para evitar conflitos de fila
+          # Adiciona apenas o ZIP e o checkpoint
+          git add dados_pncp.zip checkpoint.txt
+          
+          TIMESTAMP=$(date '+%d/%m %H:%M')
+          git commit -m "📊 RANKING: Dia Processado (ZIP) | $TIMESTAMP" || echo "Sem mudanças"
+          
           git pull origin main --rebase
           git push origin main
 
@@ -69,9 +69,9 @@ jobs:
           HOJE=$(date +'%Y%m%d')
           
           if [ "$CHECKPOINT" -lt "$HOJE" ]; then
-            echo "Ainda há dias pendentes ($CHECKPOINT < $HOJE). Reiniciando..."
-            sleep 10
+            echo "Avançando... ($CHECKPOINT < $HOJE)"
+            sleep 15
             gh workflow run main.yml
           else
-            echo "✅ Chegamos na data atual. Fim do ciclo."
+            echo "✅ Atualizado."
           fi
