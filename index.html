@@ -2,7 +2,6 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking Inteligente PNCP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,57 +10,47 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .detalhes-row { display: none; background-color: #f8fafc; }
         .detalhes-row.active { display: table-row; }
-        .scroll-custom::-webkit-scrollbar { width: 8px; }
-        .scroll-custom::-webkit-scrollbar-track { background: #f1f5f9; }
-        .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 p-4 font-sans antialiased">
+<body class="bg-slate-50 p-4">
 
     <div class="max-w-7xl mx-auto">
-        <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
-            <div class="mb-4 md:mb-0">
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight">📊 Painel de Concorrência</h1>
-                <p class="text-slate-500 font-medium text-sm">Base de Dados: <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-blue-600">dados_pncp.zip</span></p>
-            </div>
-            <div id="status" class="px-5 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-black border border-blue-100 uppercase tracking-widest shadow-sm">
-                Inicializando...
+        <header class="bg-white p-6 rounded-2xl shadow-sm mb-6 flex justify-between items-center border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">📊 Painel de Concorrência</h1>
+                <div id="status" class="mt-2 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 uppercase inline-block">Inicializando...</div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <input type="text" id="filtro" placeholder="Buscar Edital, Órgão, Fornecedor ou UASG..." class="md:col-span-2 p-4 rounded-xl border-0 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 font-medium placeholder:text-slate-400">
-            
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 ring-1 ring-slate-100">
-                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total de Processos</p>
-                <div id="count" class="text-2xl font-black text-slate-800">0</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <input type="text" id="filtro" placeholder="Buscar Órgão ou Edital..." class="p-4 rounded-xl border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-[10px] uppercase font-bold text-slate-400">Processos</p>
+                <div id="count" class="text-2xl font-black text-slate-700">0</div>
             </div>
-            
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 ring-1 ring-slate-100">
-                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Volume Financeiro</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-[10px] uppercase font-bold text-slate-400">Volume Total</p>
                 <div id="totalFinanceiro" class="text-2xl font-black text-emerald-600">R$ 0,00</div>
             </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
             <table class="min-w-full">
-                <thead class="bg-slate-900 text-white text-[10px] uppercase tracking-wider font-bold">
+                <thead class="bg-slate-900 text-white text-[10px] uppercase font-bold">
                     <tr>
                         <th class="px-6 py-4 text-left">Edital / UASG</th>
-                        <th class="px-6 py-4 text-left">Órgão / Localidade</th>
-                        <th class="px-6 py-4 text-left">Resumo (Top Vencedores)</th>
+                        <th class="px-6 py-4 text-left">Órgão</th>
                         <th class="px-6 py-4 text-right">Valor Total</th>
                     </tr>
                 </thead>
-                <tbody id="corpo" class="text-sm divide-y divide-slate-100">
-                    </tbody>
+                <tbody id="corpo" class="text-sm divide-y divide-slate-100"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="spinner" class="fixed inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-        <div class="loading w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mb-6"></div>
-        <p class="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Processando ZIP...</p>
+    <div id="spinner" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
+        <div class="loading w-12 h-12 border-4 border-slate-200 rounded-full mb-4"></div>
+        <p id="spinnerText" class="text-slate-500 font-bold text-xs uppercase tracking-widest">A carregar dados...</p>
     </div>
 
     <script>
@@ -69,170 +58,82 @@
 
         async function init() {
             const statusEl = document.getElementById('status');
-            const spinnerEl = document.getElementById('spinner');
+            const spinnerText = document.getElementById('spinnerText');
 
             try {
-                // 1. Download do ZIP (forçando ignorar o cache com Date.now)
-                statusEl.innerText = "LOCALIZANDO ZIP...";
-                const res = await fetch('dados_pncp.zip?v=' + Date.now(), { cache: 'no-store' });
-                
-                if (!res.ok) throw new Error(`O arquivo 'dados_pncp.zip' não foi encontrado no servidor (Erro ${res.status}). Verifique se o arquivo está no seu GitHub.`);
+                spinnerText.innerText = "A descarregar ficheiro...";
+                const res = await fetch('dados_pncp.zip?v=' + Date.now());
+                if (!res.ok) throw new Error("Ficheiro dados_pncp.zip não encontrado.");
 
-                // 2. Extração usando JSZip
-                statusEl.innerText = "DESCOMPACTANDO...";
                 const blob = await res.blob();
                 const zip = await JSZip.loadAsync(blob);
 
-                // 3. Busca do JSON dentro do ZIP
-                const file = zip.file("dados_pncp.json");
-                if (!file) throw new Error("O ZIP foi aberto, mas não encontrei 'dados_pncp.json' dentro dele.");
+                // Lógica Inteligente: Procura qualquer ficheiro .json dentro do ZIP
+                const jsonFileName = Object.keys(zip.files).find(name => name.endsWith('.json'));
+                
+                if (!jsonFileName) throw new Error("Não foi encontrado nenhum ficheiro JSON dentro do ZIP.");
 
-                // 4. Conversão para Objeto
-                statusEl.innerText = "LENDO DADOS...";
-                const text = await file.async("string");
+                spinnerText.innerText = "A processar conteúdos...";
+                const text = await zip.file(jsonFileName).async("string");
                 db = JSON.parse(text);
 
-                // 5. Sucesso e Renderização
-                spinnerEl.classList.add('hidden');
-                statusEl.innerText = "CONECTADO";
-                statusEl.className = "px-5 py-2 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100 uppercase tracking-widest shadow-sm";
+                document.getElementById('spinner').classList.add('hidden');
+                statusEl.innerText = "SISTEMA ONLINE";
                 render(db);
 
             } catch (e) {
-                console.error("Erro detalhado:", e);
-                statusEl.innerText = "FALHA";
-                statusEl.className = "px-5 py-2 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100 uppercase tracking-widest shadow-sm";
-                
-                spinnerEl.innerHTML = `
-                    <div class="bg-white p-8 rounded-2xl shadow-xl text-center border-2 border-red-50 max-w-md mx-4">
-                        <div class="text-red-500 text-6xl mb-4">⚠️</div>
-                        <h2 class="text-slate-900 font-black text-xl mb-2">Erro de Carregamento</h2>
-                        <p class="text-slate-500 text-sm mb-6 bg-slate-50 p-3 rounded font-mono break-all border border-slate-100">${e.message}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg">
-                            Tentar Novamente
-                        </button>
-                    </div>
-                `;
+                console.error(e);
+                document.getElementById('spinner').innerHTML = `
+                    <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-sm">
+                        <p class="text-red-500 font-bold mb-4">ERRO DE CARREGAMENTO</p>
+                        <p class="text-slate-500 text-xs mb-4">${e.message}</p>
+                        <button onclick="location.reload()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Tentar Novamente</button>
+                    </div>`;
             }
         }
 
         function render(dados) {
             const corpo = document.getElementById('corpo');
             corpo.innerHTML = "";
-            let somaGlobal = 0;
+            let soma = 0;
 
             dados.forEach((lic, i) => {
-                const totalLic = (lic.total_licitacao || 0);
-                somaGlobal += totalLic;
-
-                // Agrupamento por Fornecedor (Proteção contra dados antigos/vazios)
-                const grupos = (lic.itens || []).reduce((acc, it) => {
-                    const f = it.fornecedor || "Desconhecido";
-                    if (!acc[f]) acc[f] = { items: [], total: 0, cnpj: it.cnpj || '---', alvo: it.e_alvo || false };
-                    acc[f].items.push(it);
-                    acc[f].total += (it.total || 0);
-                    return acc;
-                }, {});
-
-                // HTML dos Detalhes Agrupados
-                const htmlDetalhes = Object.entries(grupos)
-                    .sort((a,b) => b[1].total - a[1].total)
-                    .map(([nome, info]) => `
-                    <div class="mb-4 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div class="bg-slate-50/80 px-4 py-3 border-b flex justify-between items-center">
-                            <span class="text-xs font-black ${info.alvo ? 'text-orange-600' : 'text-slate-700'} uppercase">
-                                ${nome} <span class="font-medium text-slate-400 ml-1">(${info.cnpj})</span>
-                            </span>
-                            <span class="text-xs font-black text-slate-900 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
-                                R$ ${info.total.toLocaleString('pt-br', {minimumFractionDigits: 2})}
-                            </span>
-                        </div>
-                        <div class="overflow-x-auto scroll-custom">
-                            <table class="w-full text-[10px] text-left">
-                                <thead class="text-slate-400 bg-white border-b border-slate-50">
-                                    <tr>
-                                        <th class="p-2 font-medium w-16 text-center">Item</th>
-                                        <th class="p-2 font-medium">Descrição</th>
-                                        <th class="p-2 font-medium text-center">Data Homo.</th>
-                                        <th class="p-2 font-medium text-center">Qtd</th>
-                                        <th class="p-2 font-medium text-right">Unitário</th>
-                                        <th class="p-2 font-medium text-right">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-50">
-                                    ${info.items.map(it => `
-                                        <tr class="hover:bg-blue-50/30">
-                                            <td class="p-2 font-bold text-slate-400 text-center">#${it.item}</td>
-                                            <td class="p-2 text-slate-600">${it.desc}</td>
-                                            <td class="p-2 text-center text-slate-400 font-mono">${it.data_homo || '---'}</td>
-                                            <td class="p-2 text-center font-bold text-slate-700">${it.qtd || 0}</td>
-                                            <td class="p-2 text-right text-slate-500 font-mono">R$ ${(it.unitario || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
-                                            <td class="p-2 text-right font-black text-slate-700">R$ ${(it.total || 0).toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                soma += (lic.total_licitacao || 0);
+                
+                const fornecedoresHtml = (lic.itens || []).map(it => `
+                    <div class="flex justify-between text-[11px] border-b border-slate-50 py-1">
+                        <span>Item ${it.item}: ${it.fornecedor}</span>
+                        <span class="font-bold">R$ ${it.total.toLocaleString('pt-br')}</span>
                     </div>
                 `).join('');
 
-                // Linha Principal
-                const topVenc = Object.entries(grupos)
-                    .sort((a,b)=>b[1].total - a[1].total)
-                    .slice(0,2)
-                    .map(([n,v])=>`<div class="text-[10px] text-slate-500 truncate w-56 mb-1">• <b>${n.substring(0,18)}:</b> R$ ${v.total.toLocaleString('pt-br')}</div>`)
-                    .join('');
-
                 corpo.innerHTML += `
-                    <tr class="cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-slate-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
-                        <td class="px-6 py-5">
-                            <div class="font-black text-blue-600 text-sm">${lic.edital}</div>
-                            <div class="text-[10px] font-mono text-slate-400 mt-1 bg-slate-100 inline-block px-1.5 py-0.5 rounded italic">UASG: ${lic.uasg || '---'}</div>
-                        </td>
-                        <td class="px-6 py-5">
-                            <div class="font-bold text-slate-700 text-xs uppercase truncate w-60" title="${lic.orgao}">${lic.orgao}</div>
-                            <div class="text-[10px] text-slate-400 flex items-center gap-1 mt-1 uppercase font-semibold tracking-tighter">
-                                ${lic.cidade || ''}/${lic.uf || ''}
-                            </div>
-                        </td>
-                        <td class="px-6 py-5">${topVenc || '<span class="text-slate-300 italic">Sem resultados</span>'}</td>
-                        <td class="px-6 py-5 text-right font-black text-slate-800 text-sm">R$ ${totalLic.toLocaleString('pt-br', {minimumFractionDigits: 2})}</td>
+                    <tr class="cursor-pointer hover:bg-blue-50" onclick="document.getElementById('d-${i}').classList.toggle('active')">
+                        <td class="px-6 py-4"><b class="text-blue-600">${lic.edital}</b><div class="text-[10px] text-slate-300">UASG: ${lic.uasg}</div></td>
+                        <td class="px-6 py-4"><div class="font-bold text-slate-700 uppercase text-xs">${lic.orgao}</div><div class="text-[10px] text-slate-400">${lic.uf}</div></td>
+                        <td class="px-6 py-4 text-right font-black text-slate-700">R$ ${lic.total_licitacao.toLocaleString('pt-br')}</td>
                     </tr>
                     <tr id="d-${i}" class="detalhes-row">
-                        <td colspan="4" class="p-6 bg-slate-50 border-x border-slate-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Detalhes por Vencedor
-                                </h3>
-                                <a href="${lic.link_edital}" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md transition-all flex items-center gap-2">
-                                    Ver no PNCP ↗
-                                </a>
-                            </div>
-                            <div class="max-h-[550px] overflow-y-auto pr-2 scroll-custom">
-                                ${htmlDetalhes}
+                        <td colspan="3" class="p-6">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-inner">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase mb-3">Vencedores por Item</h4>
+                                ${fornecedoresHtml}
+                                <div class="mt-4"><a href="${lic.link_edital}" target="_blank" class="bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Ver no PNCP</a></div>
                             </div>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
             });
 
             document.getElementById('count').innerText = dados.length;
-            document.getElementById('totalFinanceiro').innerText = somaGlobal.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
+            document.getElementById('totalFinanceiro').innerText = soma.toLocaleString('pt-br', {style:'currency', currency:'BRL'});
         }
 
         document.getElementById('filtro').addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase();
-            const filtrados = db.filter(d => 
-                d.orgao.toLowerCase().includes(val) || 
-                d.edital.toLowerCase().includes(val) || 
-                (d.uasg || '').includes(val) ||
-                JSON.stringify(d.resumo || {}).toLowerCase().includes(val)
-            );
-            render(filtrados);
+            render(db.filter(d => d.orgao.toLowerCase().includes(val) || d.edital.toLowerCase().includes(val)));
         });
 
-        // Inicia a aplicação
-        window.onload = init;
+        init();
     </script>
 </body>
 </html>
