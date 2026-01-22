@@ -49,16 +49,13 @@ def carregar_banco():
 def salvar_estado(banco, data_proxima):
     with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
-    
     with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.write(ARQ_JSON_INTERNO)
-    
     if os.path.exists(ARQ_JSON_INTERNO):
         os.remove(ARQ_JSON_INTERNO)
-        
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [SALVO COMPACTADO] Banco: {len(banco)} licitações.")
+    print(f"\n💾 [SALVO] Banco: {len(banco)} licitações processadas.")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -80,13 +77,21 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
             resultados = []
             for v in vends:
                 cnpj_venc = (v.get('niFornecedor') or "").replace(".", "").replace("/", "").replace("-", "")
+                
+                # Captura e formatação da Data de Homologação
+                dt_h = v.get('dataHomologacao') or v.get('dataResultado') or ""
+                dt_h_formatada = dt_h.split('T')[0].split('-')[::-1] if dt_h else []
+                dt_h_final = "/".join(dt_h_formatada) if dt_h_formatada else "---"
+
                 resultados.append({
                     "item": num_item,
                     "desc": it.get('descricao', ''),
                     "qtd": float(v.get('quantidadeHomologada') or 0),
+                    "unitario": float(v.get('valorUnitarioHomologado') or 0),
                     "total": float(v.get('valorTotalHomologado') or 0),
                     "fornecedor": v.get('nomeRazaoSocialFornecedor'),
                     "cnpj": cnpj_venc,
+                    "data_homo": dt_h_final,
                     "e_alvo": (cnpj_alvo in cnpj_venc)
                 })
             return resultados
@@ -96,7 +101,6 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
 def run():
     session = criar_sessao()
     data_atual = ler_checkpoint()
-    
     if data_atual.date() > DATA_LIMITE_FINAL.date():
         print("🎯 Ranking atualizado.")
         return
@@ -109,7 +113,6 @@ def run():
     while True:
         url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         params = {"dataInicial": DATA_STR, "dataFinal": DATA_STR, "codigoModalidadeContratacao": "6", "pagina": pagina, "tamanhoPagina": 50}
-        
         resp = session.get(url, params=params, timeout=30)
         if resp.status_code != 200: break
         
@@ -118,20 +121,17 @@ def run():
         if not lics: break
 
         for lic in lics:
-            # --- CORREÇÃO DO LINK AQUI ---
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
-            
             ano = lic.get('anoCompra')
             seq = lic.get('sequencialCompra')
             uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
             id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
             
-            # Gera o link oficial formatado para o portal
             link_pncp = f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}"
             
-            todos_itens = []
             url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org_limpo}/compras/{ano}/{seq}/itens"
+            todos_itens = []
             p_it = 1
             while True:
                 try:
@@ -155,7 +155,8 @@ def run():
                     if res:
                         for r in res:
                             itens_ranking.append(r)
-                            resumo[r['fornecedor']] = resumo.get(r['fornecedor'], 0) + r['total']
+                            nome_f = r['fornecedor'] or "Desconhecido"
+                            resumo[nome_f] = resumo.get(nome_f, 0) + r['total']
 
             if itens_ranking:
                 banco_total[id_lic] = {
@@ -165,7 +166,7 @@ def run():
                     "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
                     "uasg": uasg,
-                    "link_edital": link_pncp, # Link corrigido salvo no banco
+                    "link_edital": link_pncp,
                     "itens": itens_ranking,
                     "resumo": resumo,
                     "total_licitacao": sum(resumo.values())
