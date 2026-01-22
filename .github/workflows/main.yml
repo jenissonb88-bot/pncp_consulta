@@ -1,22 +1,23 @@
-name: 📊 Robô PNCP Ranking Automático
+name: 📊 Robô PNCP Ranking Turbo
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
+    - cron: '0 */2 * * *'  # Tenta iniciar a cada 2 horas (backup)
+  workflow_dispatch:        # Permite iniciar manualmente
 
+# Lógica de Concorrência: Coloca novas execuções na fila em vez de cancelar a atual
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ranking-coleta-group
   cancel-in-progress: false
 
 jobs:
   coleta:
     runs-on: ubuntu-latest
-    timeout-minutes: 300 
+    timeout-minutes: 360  # Limite máximo de 6 horas do GitHub
 
     permissions:
       contents: write
-      actions: write
+      actions: write  # Permite que o robô dispare a si mesmo
 
     env:
       TZ: 'America/Sao_Paulo'
@@ -37,31 +38,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests urllib3
 
-      - name: 🔄 4. Executar Coleta
+      - name: 🔄 4. Executar Coleta de Ranking
         run: |
-          git pull origin main --rebase || echo "Sync OK"
+          # Sincroniza antes de começar
+          git pull origin main --rebase || echo "Sync inicial OK"
           python coleta_pncp.py
 
-      - name: ⚙️ 5. Configurar Git
+      - name: ⚙️ 5. Configurar Identidade Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 📤 6. Commit e Push (ZIP)
+      - name: 📤 6. Commit e Push (Apenas ZIP e Checkpoint)
+        id: push-step
         run: |
-          # Remove o JSON do rastreamento caso ele tenha ficado preso no erro anterior
-          git rm --cached dados_pncp.json || echo "Arquivo limpo"
+          # Remove o JSON pesado do rastreamento do Git caso ele exista
+          git rm --cached dados_pncp.json || echo "JSON já fora do rastreio"
           
-          # Adiciona apenas o ZIP e o checkpoint
+          # Adiciona o ZIP compactado e o checkpoint
           git add dados_pncp.zip checkpoint.txt
           
           TIMESTAMP=$(date '+%d/%m %H:%M')
-          git commit -m "📊 RANKING: Dia Processado (ZIP) | $TIMESTAMP" || echo "Sem mudanças"
+          git commit -m "📊 RANKING: Dia Processado | $TIMESTAMP" || echo "Nada para commitar"
           
+          # Tenta o push com rebase para evitar conflitos de sincronia
           git pull origin main --rebase
-          git push origin main
+          if git push origin main; then
+            echo "push_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "push_success=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: 🚀 7. Reiniciar Loop (Auto-Trigger)
+      - name: 🚀 7. Disparar Próxima Coleta (Auto-Reinício)
+        # Só dispara o próximo se o push anterior deu certo
+        if: steps.push-step.outputs.push_success == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -69,9 +79,9 @@ jobs:
           HOJE=$(date +'%Y%m%d')
           
           if [ "$CHECKPOINT" -lt "$HOJE" ]; then
-            echo "Avançando... ($CHECKPOINT < $HOJE)"
-            sleep 15
+            echo "Ainda existem dias pendentes ($CHECKPOINT < $HOJE). Reiniciando agora..."
+            sleep 10
             gh workflow run main.yml
           else
-            echo "✅ Atualizado."
+            echo "✅ Base de dados do Ranking 100% atualizada!"
           fi
