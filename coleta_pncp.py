@@ -9,15 +9,15 @@ from datetime import datetime, timedelta
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- CONFIGURAÇÕES GERAIS ---
+# --- CONFIGURAÇÕES ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CNPJ_ALVO = "08778201000126"   # DROGAFONTE
 DATA_LIMITE_FINAL = datetime.now()
-DIAS_POR_CICLO = 1             
-MAX_WORKERS = 20               
-ARQ_ZIP = 'dados_pncp.zip'     
-ARQ_JSON_INTERNO = 'dados_pncp.json'
+DIAS_POR_CICLO = 1             # Processa 1 dia por vez e passa o bastão
+MAX_WORKERS = 20               # Velocidade (Threads)
+ARQ_ZIP = 'dados_pncp.zip'     # Nome do arquivo final no GitHub
+ARQ_JSON_INTERNO = 'dados_pncp.json' # Nome do arquivo DENTRO do ZIP
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
 HEADERS = {
@@ -36,26 +36,39 @@ def criar_sessao():
     return session
 
 def carregar_banco():
+    """Lê o banco de dados diretamente de dentro do ZIP."""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
-                with z.open(ARQ_JSON_INTERNO) as f:
-                    dados = json.load(f)
-                    return {lic.get('id_licitacao'): lic for lic in dados}
+                # Verifica se o arquivo existe dentro do ZIP
+                if ARQ_JSON_INTERNO in z.namelist():
+                    with z.open(ARQ_JSON_INTERNO) as f:
+                        return {lic.get('id_licitacao'): lic for lic in json.load(f)}
         except Exception as e:
-            print(f"⚠️ Erro ao carregar ZIP: {e}")
+            print(f"⚠️ Aviso: Criando novo banco (Erro ao ler ZIP: {e})")
     return {}
 
 def salvar_estado(banco, data_proxima):
+    """Salva JSON, Compacta em ZIP, Apaga JSON e Atualiza Checkpoint."""
+    lista_final = list(banco.values())
+    
+    # 1. Cria o JSON temporário
     with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
-        json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
+        json.dump(lista_final, f, indent=2, ensure_ascii=False)
+    
+    # 2. Compacta para o ZIP
     with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.write(ARQ_JSON_INTERNO)
+    
+    # 3. Remove o JSON pesado
     if os.path.exists(ARQ_JSON_INTERNO):
         os.remove(ARQ_JSON_INTERNO)
+        
+    # 4. Atualiza a data
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [SALVO] Banco: {len(banco)} licitações processadas.")
+        
+    print(f"\n💾 [SUCESSO] Banco salvo e compactado: {len(lista_final)} licitações.")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -63,12 +76,15 @@ def ler_checkpoint():
             with open(ARQ_CHECKPOINT, 'r') as f:
                 return datetime.strptime(f.read().strip(), '%Y%m%d')
         except: pass
+    # Data de início padrão caso não exista checkpoint
     return datetime(2025, 1, 1)
 
 def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
+    """Coleta os vencedores de um item específico."""
     if not it.get('temResultado'): return None
     num_item = it.get('numeroItem')
     url_res = f"{url_base_itens}/{num_item}/resultados"
+    
     try:
         r = session.get(url_res, timeout=15)
         if r.status_code == 200:
@@ -78,10 +94,15 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
             for v in vends:
                 cnpj_venc = (v.get('niFornecedor') or "").replace(".", "").replace("/", "").replace("-", "")
                 
-                # Captura e formatação da Data de Homologação
+                # Tratamento da Data de Homologação
                 dt_h = v.get('dataHomologacao') or v.get('dataResultado') or ""
-                dt_h_formatada = dt_h.split('T')[0].split('-')[::-1] if dt_h else []
-                dt_h_final = "/".join(dt_h_formatada) if dt_h_formatada else "---"
+                if dt_h:
+                    try:
+                        dt_h = dt_h.split('T')[0].split('-')[::-1]
+                        dt_h = "/".join(dt_h)
+                    except: dt_h = "---"
+                else:
+                    dt_h = "---"
 
                 resultados.append({
                     "item": num_item,
@@ -91,7 +112,7 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
                     "total": float(v.get('valorTotalHomologado') or 0),
                     "fornecedor": v.get('nomeRazaoSocialFornecedor'),
                     "cnpj": cnpj_venc,
-                    "data_homo": dt_h_final,
+                    "data_homo": dt_h,
                     "e_alvo": (cnpj_alvo in cnpj_venc)
                 })
             return resultados
@@ -101,35 +122,47 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
 def run():
     session = criar_sessao()
     data_atual = ler_checkpoint()
+    
     if data_atual.date() > DATA_LIMITE_FINAL.date():
-        print("🎯 Ranking atualizado.")
+        print("✅ Ranking totalmente atualizado!")
         return
 
     banco_total = carregar_banco()
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 📊 RANKING: Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 🚀 RANKING: Processando Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
+        # Busca todas as compras do dia
         url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = {"dataInicial": DATA_STR, "dataFinal": DATA_STR, "codigoModalidadeContratacao": "6", "pagina": pagina, "tamanhoPagina": 50}
-        resp = session.get(url, params=params, timeout=30)
-        if resp.status_code != 200: break
+        params = {
+            "dataInicial": DATA_STR, "dataFinal": DATA_STR,
+            "codigoModalidadeContratacao": "6", # Pregão Eletrônico
+            "pagina": pagina, "tamanhoPagina": 50
+        }
         
-        data_json = resp.json()
-        lics = data_json.get('data', [])
-        if not lics: break
+        try:
+            resp = session.get(url, params=params, timeout=30)
+            if resp.status_code != 200: break
+            data_json = resp.json()
+            lics = data_json.get('data', [])
+            if not lics: break
+        except: break
 
         for lic in lics:
+            # Dados básicos do Edital
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
+            
             ano = lic.get('anoCompra')
             seq = lic.get('sequencialCompra')
             uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
             id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
             
+            # Link oficial corrigido
             link_pncp = f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}"
             
+            # Busca Itens
             url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org_limpo}/compras/{ano}/{seq}/itens"
             todos_itens = []
             p_it = 1
@@ -146,6 +179,7 @@ def run():
 
             if not todos_itens: continue
 
+            # Processamento Paralelo dos Resultados
             itens_ranking = []
             resumo = {}
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -155,9 +189,10 @@ def run():
                     if res:
                         for r in res:
                             itens_ranking.append(r)
-                            nome_f = r['fornecedor'] or "Desconhecido"
-                            resumo[nome_f] = resumo.get(nome_f, 0) + r['total']
+                            nome = r['fornecedor'] or "Desconhecido"
+                            resumo[nome] = resumo.get(nome, 0) + r['total']
 
+            # Salva no dicionário se houver itens homologados
             if itens_ranking:
                 banco_total[id_lic] = {
                     "id_licitacao": id_lic,
@@ -176,6 +211,7 @@ def run():
         if pagina >= data_json.get('totalPaginas', 1): break
         pagina += 1
 
+    # Finaliza o dia e salva
     salvar_estado(banco_total, data_atual + timedelta(days=1))
 
 if __name__ == "__main__":
