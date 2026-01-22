@@ -4,19 +4,21 @@ import os
 import time
 import urllib3
 import concurrent.futures
+import zipfile
 from datetime import datetime, timedelta
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- CONFIGURAÇÕES ---
-CNPJ_ALVO = "08778201000126"
-DIAS_POR_CICLO = 1
-MAX_WORKERS = 20
-ARQ_DADOS = 'dados_pncp.json'
-ARQ_CHECKPOINT = 'checkpoint.txt'
-DATA_LIMITE_FINAL = datetime.now()
-
+# --- CONFIGURAÇÕES GERAIS ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+CNPJ_ALVO = "08778201000126"   # DROGAFONTE
+DATA_LIMITE_FINAL = datetime.now()
+DIAS_POR_CICLO = 1             
+MAX_WORKERS = 20               
+ARQ_ZIP = 'dados_pncp.zip'     # Arquivo compactado para o GitHub
+ARQ_JSON_INTERNO = 'dados_pncp.json'
+ARQ_CHECKPOINT = 'checkpoint.txt'
 
 HEADERS = {
     'Accept': 'application/json',
@@ -34,20 +36,34 @@ def criar_sessao():
     return session
 
 def carregar_banco():
-    if os.path.exists(ARQ_DADOS):
+    """Lê os dados diretamente de dentro do arquivo ZIP."""
+    if os.path.exists(ARQ_ZIP):
         try:
-            with open(ARQ_DADOS, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-                return {lic.get('id_licitacao'): lic for lic in dados}
-        except: pass
+            with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
+                with z.open(ARQ_JSON_INTERNO) as f:
+                    dados = json.load(f)
+                    return {lic.get('id_licitacao'): lic for lic in dados}
+        except Exception as e:
+            print(f"⚠️ Erro ao carregar ZIP: {e}")
     return {}
 
 def salvar_estado(banco, data_proxima):
-    with open(ARQ_DADOS, 'w', encoding='utf-8') as f:
+    """Gera o JSON, compacta em ZIP e deleta o JSON para economizar espaço."""
+    # 1. Salva o JSON temporário
+    with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
         json.dump(list(banco.values()), f, indent=2, ensure_ascii=False)
+    
+    # 2. Cria o ZIP
+    with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+        z.write(ARQ_JSON_INTERNO)
+    
+    # 3. Remove o JSON pesado
+    if os.path.exists(ARQ_JSON_INTERNO):
+        os.remove(ARQ_JSON_INTERNO)
+        
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f" 💾 [Banco: {len(banco)} licitações]", end="", flush=True)
+    print(f"\n💾 [SALVO COMPACTADO] Banco: {len(banco)} licitações.")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -58,7 +74,6 @@ def ler_checkpoint():
     return datetime(2025, 1, 1)
 
 def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
-    """Coleta todos os vencedores do item para o Ranking."""
     if not it.get('temResultado'): return None
     num_item = it.get('numeroItem')
     url_res = f"{url_base_itens}/{num_item}/resultados"
@@ -74,7 +89,6 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
                     "item": num_item,
                     "desc": it.get('descricao', ''),
                     "qtd": float(v.get('quantidadeHomologada') or 0),
-                    "valor": float(v.get('valorUnitarioHomologado') or 0),
                     "total": float(v.get('valorTotalHomologado') or 0),
                     "fornecedor": v.get('nomeRazaoSocialFornecedor'),
                     "cnpj": cnpj_venc,
@@ -84,19 +98,17 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
     except: pass
     return None
 
-def main():
-    data_inicio = ler_checkpoint()
-    if data_inicio.date() > DATA_LIMITE_FINAL.date():
+def run():
+    session = criar_sessao()
+    data_atual = ler_checkpoint()
+    
+    if data_atual.date() > DATA_LIMITE_FINAL.date():
         print("🎯 Ranking atualizado.")
         return
 
-    session = criar_sessao()
     banco_total = carregar_banco()
-    
-    # Processa exatamente 1 dia conforme solicitado
-    data_atual = data_inicio
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 📊 RANKING: Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 📊 RANKING ZIP: Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
@@ -115,7 +127,6 @@ def main():
             uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
             id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
             
-            # Coleta itens
             todos_itens = []
             url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
             p_it = 1
@@ -127,8 +138,6 @@ def main():
                 todos_itens.extend(lote)
                 if len(lote) < 1000: break
                 p_it += 1
-
-            if not todos_itens: continue
 
             itens_ranking = []
             resumo = {}
@@ -156,8 +165,7 @@ def main():
         if pagina >= resp.json().get('totalPaginas', 1): break
         pagina += 1
 
-    # Ao fim do dia, avança 1 dia e salva
     salvar_estado(banco_total, data_atual + timedelta(days=1))
 
 if __name__ == "__main__":
-    main()
+    run()
