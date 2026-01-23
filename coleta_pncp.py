@@ -20,6 +20,9 @@ ARQ_ZIP = 'dados_pncp.zip'
 ARQ_JSON_INTERNO = 'dados_pncp.json' 
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
+# ESTADOS QUE VOCÊ NÃO QUER COLETAR E DESEJA REMOVER DO BANCO
+ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
+
 HEADERS = {
     'Accept': 'application/json',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -36,16 +39,28 @@ def criar_sessao():
     return session
 
 def carregar_banco():
+    """Carrega o banco e já filtra removendo os estados excluídos para poupar espaço"""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
-                # Busca flexível pelo nome do arquivo
                 arquivos = z.namelist()
                 json_file = next((f for f in arquivos if f.endswith('.json')), None)
                 
                 if json_file:
                     with z.open(json_file) as f:
-                        return {lic.get('id_licitacao'): lic for lic in json.load(f)}
+                        dados = json.load(f)
+                        # Filtra o banco: Mantém apenas quem NÃO está na lista de exclusão
+                        banco_filtrado = {
+                            lic.get('id_licitacao'): lic 
+                            for lic in dados 
+                            if lic.get('uf') not in ESTADOS_EXCLUIDOS
+                        }
+                        
+                        removidos = len(dados) - len(banco_filtrado)
+                        if removidos > 0:
+                            print(f"🧹 Limpeza: {removidos} registros de estados excluídos foram removidos do banco.")
+                        
+                        return banco_filtrado
         except Exception as e:
             print(f"⚠️ Aviso: Criando novo banco (Erro ao ler ZIP: {e})")
     return {}
@@ -53,19 +68,15 @@ def carregar_banco():
 def salvar_estado(banco, data_proxima):
     lista_final = list(banco.values())
     
-    # 1. Cria o JSON (Compacto, sem indentação para ficar leve e evitar erro de quebra de linha)
     with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
-        json.dump(lista_final, f, ensure_ascii=False) # Removi o indent=2 para economizar espaço
+        json.dump(lista_final, f, ensure_ascii=False)
     
-    # 2. Compacta para o ZIP (Forçando a raiz com arcname)
     with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.write(ARQ_JSON_INTERNO, arcname=ARQ_JSON_INTERNO)
     
-    # 3. Limpeza
     if os.path.exists(ARQ_JSON_INTERNO):
         os.remove(ARQ_JSON_INTERNO)
         
-    # 4. Checkpoint
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
         
@@ -124,7 +135,9 @@ def run():
         print("✅ Ranking totalmente atualizado!")
         return
 
+    # O carregar_banco agora já filtra os dados antigos
     banco_total = carregar_banco()
+    
     DATA_STR = data_atual.strftime('%Y%m%d')
     print(f"--- 🚀 RANKING: Processando Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
@@ -142,6 +155,12 @@ def run():
         except: break
 
         for lic in lics:
+            # --- FILTRO DE ESTADOS NA COLETA NOVA ---
+            uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
+            if uf_licitacao in ESTADOS_EXCLUIDOS:
+                continue
+            # ---------------------------------------
+
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
             ano = lic.get('anoCompra')
@@ -183,7 +202,7 @@ def run():
                     "id_licitacao": id_lic,
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
-                    "uf": lic.get('unidadeOrgao', {}).get('ufSigla'),
+                    "uf": uf_licitacao,
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
                     "uasg": uasg,
                     "link_edital": link_pncp,
