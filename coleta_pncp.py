@@ -20,7 +20,7 @@ ARQ_ZIP = 'dados_pncp.zip'
 ARQ_JSON_INTERNO = 'dados_pncp.json' 
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
-# 1. ESTADOS EXCLUÍDOS (Não serão coletados nem mantidos no banco)
+# 1. ESTADOS EXCLUÍDOS
 ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
 
 # 2. PALAVRAS-CHAVE EXPANDIDAS (O objeto deve conter pelo menos uma)
@@ -28,7 +28,7 @@ PALAVRAS_INTERESSE = [
     "MEDICAMENTO", "REMEDIO", "HOSPITAL", "SAUDE", "INSUMO", 
     "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", 
     "MEDICO", "ODONTO", "QUIMICO", "LABORAT", "CLINIC", 
-    "EQUIPAMENTO MEDICO", "SANEANTE", "CORRELATO", "CIRURGIC"
+    "CIRURGIC", "SANEANTE", "PENSO", "DIALISE", "GAZE", "AGULHA"
 ]
 
 HEADERS = {
@@ -37,13 +37,13 @@ HEADERS = {
 }
 
 def objeto_e_relevante(texto):
-    """Verifica se o objeto da licitação é relevante para o nicho de saúde."""
+    """Verifica se o objeto da licitação é do nicho de saúde."""
     if not texto: return False
     texto_upper = texto.upper()
     return any(termo in texto_upper for termo in PALAVRAS_INTERESSE)
 
 def carregar_banco():
-    """Lê o banco e aplica filtros, protegendo registros antigos sem campo 'objeto'."""
+    """Carrega o banco e aplica filtros, protegendo dados antigos sem campo 'objeto'."""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
@@ -58,17 +58,18 @@ def carregar_banco():
                             uf = lic.get('uf')
                             obj = lic.get('objeto')
                             
-                            # Filtro 1: UF
+                            # Filtro 1: Se o estado está na lista de exclusão, descarta sempre
                             if uf in ESTADOS_EXCLUIDOS:
                                 continue
                             
-                            # Filtro 2: Objeto (Mantém antigos sem objeto, filtra novos com objeto)
+                            # Filtro 2: Se não tem 'objeto' (dado antigo), mantém para segurança.
+                            # Se tem, aplica a filtragem de palavras-chave.
                             if obj is None or objeto_e_relevante(obj):
                                 banco_filtrado[lic.get('id_licitacao')] = lic
                         
                         removidos = len(dados) - len(banco_filtrado)
                         if removidos > 0:
-                            print(f"🧹 Limpeza: {removidos} registros removidos. Restam {len(banco_filtrado)}.")
+                            print(f"🧹 Faxina: {removidos} registros removidos. Restam {len(banco_filtrado)}.")
                         return banco_filtrado
         except Exception as e:
             print(f"⚠️ Erro ao carregar banco: {e}")
@@ -83,13 +84,15 @@ def salvar_estado(banco, data_proxima):
     if os.path.exists(ARQ_JSON_INTERNO): os.remove(ARQ_JSON_INTERNO)
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [SUCESSO] Banco salvo com {len(lista_final)} licitações.")
+    print(f"\n💾 [SUCESSO] Banco salvo com {len(lista_final)} licitações relevantes.")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
         try:
             with open(ARQ_CHECKPOINT, 'r') as f:
-                return datetime.strptime(f.read().strip(), '%Y%m%d')
+                data_str = f.read().strip()
+                if data_str:
+                    return datetime.strptime(data_str, '%Y%m%d')
         except: pass
     return datetime(2025, 1, 1)
 
@@ -145,17 +148,14 @@ def run():
 
     banco_total = carregar_banco()
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 🚀 BUSCA REFINADA: Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 🏥 BUSCA SAÚDE: {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
         url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         params = { 
-            "dataInicial": DATA_STR, 
-            "dataFinal": DATA_STR, 
-            "codigoModalidadeContratacao": "6", 
-            "pagina": pagina, 
-            "tamanhoPagina": 50 
+            "dataInicial": DATA_STR, "dataFinal": DATA_STR, 
+            "codigoModalidadeContratacao": "6", "pagina": pagina, "tamanhoPagina": 50 
         }
         
         try:
@@ -168,12 +168,13 @@ def run():
 
         for lic in lics:
             uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
-            objeto_desc = lic.get('objeto', '') or ""
+            objeto_desc = (lic.get('objeto', '') or "").strip()
 
-            # Filtros de Coleta
+            # Filtros Iniciais (UF e Palavras-chave)
             if uf_licitacao in ESTADOS_EXCLUIDOS: continue
             if not objeto_e_relevante(objeto_desc): continue
 
+            # Se chegou aqui, é saúde e é de um estado permitido. Vamos processar:
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
             ano = lic.get('anoCompra')
@@ -213,7 +214,7 @@ def run():
                 banco_total[id_lic] = {
                     "id_licitacao": id_lic,
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "objeto": objeto_desc, # Agora salvando para evitar exclusão futura
+                    "objeto": objeto_desc, # SALVAMENTO DO OBJETO PARA FILTRO FUTURO
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
                     "uf": uf_licitacao,
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
