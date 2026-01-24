@@ -5,6 +5,7 @@ import time
 import urllib3
 import concurrent.futures
 import zipfile
+import unicodedata
 from datetime import datetime, timedelta
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -14,7 +15,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CNPJ_ALVO = "08778201000126"   # DROGAFONTE
 DATA_LIMITE_FINAL = datetime.now()
-DIAS_POR_CICLO = 1             
 MAX_WORKERS = 20               
 ARQ_ZIP = 'dados_pncp.zip'     
 ARQ_JSON_INTERNO = 'dados_pncp.json' 
@@ -23,13 +23,9 @@ ARQ_CHECKPOINT = 'checkpoint.txt'
 # 1. ESTADOS EXCLUÍDOS
 ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
 
-# 2. PALAVRAS-CHAVE (Se o objeto for vazio, baixamos para conferir os itens)
+# 2. PALAVRAS-CHAVE EXTRAÍDAS DOS SEUS ARQUIVOS (CIMED, MATERIAL, REMEDIO)
 PALAVRAS_INTERESSE = [
-    "MEDICAMENTO", "REMEDIO", "HOSPITAL", "SAUDE", "INSUMO", 
-    "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", 
-    "MEDICO", "ODONTO", "QUIMICO", "LABORAT", "CLINIC", 
-    "CIRURGIC", "SANEANTE", "PENSO", "DIALISE", "GAZE", "AGULHA",
-    "MATERIAIS", "AQUISICAO", "SUPRIMENTO"
+    "ABSORVENTE", "ACETILCISTEINA", "ACETILSALICILICO", "ACICLOVIR", "ADENOSINA", "ADRENALINA", "AGULHA", "ALBENDAZOL", "ALCOOL", "ALENDRONATO", "ALFAEPOETINA", "ALFAINTERFERONA", "ALFAST", "ALGODAO", "ALOPURINOL", "ALPRAZOLAM", "AMBROXOL", "AMBROXOL XPE", "AMINOFILINA", "AMIODARONA", "AMITRIPTILINA", "AMOXICILINA", "AMPICILINA", "ANASTROZOL", "ANFOTERICINA", "ANLODIPINO", "ARIPIPRAZOL", "ATADURA", "ATENOLOL", "ATORVASTANTINA", "ATORVASTATINA", "ATORVASTATINA CALCICA", "ATRACURIO", "ATROPINA", "AVENTAL", "AZITROMICINA", "AZTREONAM", "BACITRACINA", "BECLOMETASONA", "BETAMETASONA", "BETAXOLOL", "BI-DESTILADA", "BICARBONATO", "BIMATOPROSTA", "BIPERIDENO", "BISACODIL", "BISOPROLOL", "BORTEZOMIBE", "BRIMONIDINA", "BROMAZEPAM", "BROMETO", "BROMOPRIDA", "BUCLIZINA", "BUDESONIDA", "BUPIVACAINA", "BUPROPIONA", "CABERGOLINA", "CAMPO OPERATORIO", "CANABIDIOL", "CANABIS", "CAPECITABINA", "CAPTOPRIL", "CARBAMAZEPINA", "CARBIDOPA", "CARBOPLATINA", "CARMELOSE", "CARVEDILOL", "CATETER", "CAVERDILOL", "CEFALEXINA", "CEFALOTINA", "CEFAZOLINA", "CEFEPIMA", "CEFTAZIDIMA", "CEFTRIAXONA", "CETOCONAZOL", "CETOPROFENO", "CETROTIDE", "CICLOBENZAPRINA", "CICLOPENTOLATO", "CIMETIDINA", "CINARIZINA", "CIPROFLOXACINA", "CIPROFLOXACINO", "CISATRACURIO", "CISPLATINA", "CITALOPRAM", "CLADRIBINA", "CLINDAMICINA", "CLOMIPRAMINA", "CLONAZEPAM", "CLONIDINA", "CLOPIDOGREL", "CLORETO", "CLOREXIDINA", "CLORPROMAZINA", "CLORTALIDONA", "CODEINA", "COLAGENASE", "COLETOR", "COMPRESSA", "DANTROLENO", "DAPTOMICINA", "DEGERMANTE", "DESLANOSIDEO", "DESVENLAXINA", "DEXAMETASONA", "DEXCLORFENIRAMINA", "DEXMEDETOMIDINA", "DEXPANTENOL", "DEXTRANA+HIPROMELOSE", "DEXTROCETAMINA", "DIAZEPAM", "DICLOF.DIETILAMONIO", "DICLOFENACO", "DIFENIDRAMINA", "DIMENIDRINATO", "DIOSMINA", "DIPIRONA", "DIPROSPAN", "DOBUTAMINA", "DOMPERIDONA", "DONEPEZILA", "DOXAZOSINA", "DROPERIDOL", "DULOXETINA", "EFEDRINA", "ENALAPRIL", "ENOXAPARINA", "ENTERAL", "EQUIPO", "ESCITALOPRAM", "ESCOPOLAMINA", "ESMOLOL", "ESPARADRAPO", "ESPIRONOLACTONA", "ESTRADIOL", "ESTRIOL", "ETER", "ETILEFRINA", "ETOMIDATO", "FENITOINA", "FENOBARBITAL", "FENTANILA", "FERRO", "FEXOFENADINA", "FINASTERIDA", "FLUCONAZOL", "FLUFENAN", "FLUMAZENIL", "FLUOXETINA", "FOLICO", "FOLINICO", "FOSFOENEMA", "FRALDA", "FUROSEMIDA", "GABAPENTINA", "GANCICLOVIR", "GENCITABINA", "GENTAMICINA", "GLIBENCLAMIDA", "GLICLAZIDA", "GLICOSE", "GLIMEPIRIDA", "GLUCONATO", "GLUTARALDEIDO", "GRAXOS", "HALOPERIDOL", "HEPARINA", "HIDRALAZINA", "HIDROCLOROTIAZIDA", "HIDROCORTISONA", "HIDROXIUREIA", "HIGIENE", "HIOSCINA", "IBUPROFENO", "IMIPRAMINA", "INJECAO", "INSUMO", "IPRATROPIO", "IRINOTECANO", "ISOFLURANO", "ISOSSORBIDA", "ITRACONAZOL", "IVERMECTINA", "LACTULOSE", "LACTULOSE XP", "LAMOTRIGINA", "LATANOPROSTA", "LEUPRORRELINA", "LEVETIRACETAM", "LEVOBUPIVACAINA", "LEVODOPA", "LEVOFLOXACINO", "LEVOMEPROMAZINA", "LEVONORGESTREL", "LEVOSIMENDANA", "LEVOTIROXINA", "LIDOCAINA", "LORATADINA", "LOSARTANA", "LUVA", "MAGNESIO", "MANITOL", "MASCARA", "MATERIAL", "MAVENCLAD", "MEDROXIPROGESTERONA", "MELOXICAN", "MEMANTINA", "MEROPENEN", "MESILATO", "METADONA", "METARAMINOL", "METFORMINA", "METILDOPA", "METILERGOMETRINA", "METILFENIDATO", "METILPREDINISOLONA", "METOCLOPRAMIDA", "METOPROLOL", "METOPROLOL SUCCINATO", "METRONIDAZOL", "MICONAZOL", "MICONAZOL LOC", "MICROPORE", "MIDAZOLAM", "MIDAZOLAN", "MIRTAZAPINA", "MMH", "MORFINA", "MUPIROCINA", "NALBUFINA", "NALOXONA", "NALTREXONA", "NEOMICINA", "NEOSTIGMINA", "NIFEDIPINA", "NIMESULIDA", "NISTATINA", "NISTATINA+OXIDO DE ZINCO", "NITROGLICERINA", "NITROPRUSSIATO", "NOREPINEFRINA", "NORESTISTERONA", "NORTRIPTILINA", "OCTREOTIDA", "OLANZAPINA", "OMEPRAZOL", "ONDANSETRONA", "OXACILINA", "OXCARBAZEPINA", "OXIBUPROCAINA", "OXITOCINA", "PALMITATO DE RETINOL", "PAMIDRONATO", "PANCURONIO", "PANTOPRAZOL", "PARACETAMOL", "PAROXETINA", "PEMETREXEDE", "PENICILINA", "PENSO", "PENTOXIFILINA", "PERMETRINA", "PILOCARPINA", "PIPERACILINA", "POLICRESULENO", "POLIMIXINA", "PREDNISOLONA", "PREDNISONA", "PREGABALINA", "PROMETAZINA", "PROPIONATO", "PROPOFOL", "PROPRANOLOL", "QUETIAPINA", "REMIFENTANILA", "RETINOL", "RISPERIDONA", "RITUXIMABE", "RIVAROXABANA", "RIVASTIGMINA", "ROCURONIO", "ROPIVACAINA", "ROSUVASTATINA", "ROSUVASTATINA CALCICA", "SACCHAROMYCES", "SAIS", "SALBUTAMOL", "SAPATILHA", "SERINGA", "SERTRALINA", "SEVOFLURANO", "SIMETICONA", "SINVASTATINA", "SOMATROPINA", "SONDA", "SORO", "SUCCINATO", "SUFENTANILA", "SUGAMADEX", "SULFADIAZINA", "SULFAMETOXAZOL", "SULFATO", "SUXAMETONIO", "TAZOBACTAM", "TEMOZOLAMIDA", "TEMOZOLOMIDA", "TENOXICAN", "TERBUTALINA", "TIAMINA", "TIGECICLINA", "TIOPENTAL", "TIORIDAZINA", "TOBRAMICINA", "TOPIRAMATO", "TOUCA", "TRAMADOL", "TRANEXAMICO", "TRAVOPROSTA", "TRIMETOPRIMA", "TROMETAMOL", "TROPICAMIDA", "TUBO", "URSODESOXICOLICO", "VALPROICO", "VALSARTANA", "VANCOMICINA", "VARFARINA", "VASELINA", "VASOPRESSINA", "VENLAFAXINA", "VORICONAZOL", "ZOLEDRONICO"
 ]
 
 HEADERS = {
@@ -37,14 +33,20 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
+def normalize_text(text):
+    """Remove acentos e coloca em maiúsculo (Ex: Acetilcisteína -> ACETILCISTEINA)"""
+    if not isinstance(text, str): return str(text or "")
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn').upper()
+
 def objeto_e_relevante(texto):
-    """Verifica se o texto contém termos de saúde."""
+    """Verifica se o texto contém algum termo da lista de interesse"""
     if not texto: return False
-    texto_upper = texto.upper()
-    return any(termo in texto_upper for termo in PALAVRAS_INTERESSE)
+    texto_norm = normalize_text(texto)
+    # Verifica se qualquer palavra da lista está contida no texto
+    return any(termo in texto_norm for termo in PALAVRAS_INTERESSE)
 
 def carregar_banco():
-    """Carrega o banco protegendo dados antigos."""
+    """Carrega o banco, mantendo dados antigos que não sejam dos estados excluídos"""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
@@ -56,11 +58,9 @@ def carregar_banco():
                         dados = json.load(f)
                         banco_filtrado = {}
                         for lic in dados:
-                            uf = lic.get('uf')
-                            # Filtro apenas por UF no carregamento para não perder dados
-                            if uf not in ESTADOS_EXCLUIDOS:
+                            # Filtro apenas por UF no carregamento para preservar histórico
+                            if lic.get('uf') not in ESTADOS_EXCLUIDOS:
                                 banco_filtrado[lic.get('id_licitacao')] = lic
-                        
                         return banco_filtrado
         except Exception as e:
             print(f"⚠️ Erro ao carregar banco: {e}")
@@ -84,7 +84,7 @@ def ler_checkpoint():
                 d = f.read().strip()
                 if d: return datetime.strptime(d, '%Y%m%d')
         except: pass
-    return datetime(2025, 1, 1) # Data padrão se não houver checkpoint
+    return datetime(2025, 1, 1)
 
 def criar_sessao():
     session = requests.Session()
@@ -96,19 +96,14 @@ def criar_sessao():
     session.mount('http://', adapter)
     return session
 
-def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
-    if not it.get('temResultado'): return None
+def processar_item_ranking(session, it, url_base_itens, cnpj_alvo, filtrar_itens_rigoroso=False):
     num_item = it.get('numeroItem')
-    desc_item = (it.get('descricao', '') or "").upper()
+    desc_item = it.get('descricao', '') or ""
     
-    # TRUQUE: Se chegamos até aqui, o objeto principal podia estar vazio.
-    # Mas se o ITEM não tiver nada a ver com saúde, ignoramos o item também.
-    # Isso evita salvar pneu e café no banco.
-    if not objeto_e_relevante(desc_item):
-         # Uma chance extra: se a descrição for muito curta (ex: "ITEM 1"), aceita.
-         # Se for longa e não tiver palavra-chave, rejeita.
-         if len(desc_item) > 10: 
-             return None
+    # Se o Objeto Principal era VAZIO, precisamos ser rigorosos com o Item.
+    # Se o item não for um dos medicamentos da lista, ignoramos.
+    if filtrar_itens_rigoroso and not objeto_e_relevante(desc_item):
+        return None
 
     url_res = f"{url_base_itens}/{num_item}/resultados"
     try:
@@ -116,6 +111,8 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
         if r.status_code == 200:
             vends = r.json()
             if isinstance(vends, dict): vends = [vends]
+            if not vends: return None
+
             resultados = []
             for v in vends:
                 cnpj_venc = (v.get('niFornecedor') or "").replace(".", "").replace("/", "").replace("-", "")
@@ -127,7 +124,7 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
                 
                 resultados.append({
                     "item": num_item,
-                    "desc": it.get('descricao', ''),
+                    "desc": desc_item,
                     "qtd": float(v.get('quantidadeHomologada') or 0),
                     "unitario": float(v.get('valorUnitarioHomologado') or 0),
                     "total": float(v.get('valorTotalHomologado') or 0),
@@ -150,7 +147,7 @@ def run():
 
     banco_total = carregar_banco()
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 🏥 BUSCA INTELIGENTE: {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 🏥 BUSCA ESPECIALISTA: {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
@@ -172,14 +169,20 @@ def run():
             uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
             objeto_desc = (lic.get('objeto', '') or "").strip()
 
-            # 1. Filtro de Estado (Rigoroso)
+            # 1. Filtro de Estado
             if uf_licitacao in ESTADOS_EXCLUIDOS: continue
 
-            # 2. Filtro de Objeto (Flexível)
-            # Se tem texto E não tem palavra-chave -> Ignora
-            # Se NÃO tem texto (vazio) -> Deixa passar para verificar os itens
-            if objeto_desc and not objeto_e_relevante(objeto_desc):
-                continue
+            # 2. Lógica de Filtro de Conteúdo
+            filtrar_itens_rigoroso = False
+            
+            if objeto_desc:
+                # Se tem Objeto escrito, verificamos se bate com a lista
+                if not objeto_e_relevante(objeto_desc):
+                    continue # Objeto existe mas não é de saúde -> Ignora
+                # Se bate com a lista, baixamos tudo (filtrar_itens_rigoroso = False)
+            else:
+                # Se o Objeto é VAZIO, deixamos passar mas filtramos item a item
+                filtrar_itens_rigoroso = True
 
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
@@ -207,7 +210,8 @@ def run():
             itens_ranking = []
             resumo = {}
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                futures = [executor.submit(processar_item_ranking, session, it, url_itens, CNPJ_ALVO) for it in todos_itens]
+                # Passamos a flag 'filtrar_itens_rigoroso'
+                futures = [executor.submit(processar_item_ranking, session, it, url_itens, CNPJ_ALVO, filtrar_itens_rigoroso) for it in todos_itens]
                 for f in concurrent.futures.as_completed(futures):
                     res = f.result()
                     if res:
@@ -220,7 +224,7 @@ def run():
                 banco_total[id_lic] = {
                     "id_licitacao": id_lic,
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "objeto": objeto_desc or "OBJETO NÃO INFORMADO", # Salva algo legível
+                    "objeto": objeto_desc or "OBJETO NÃO INFORMADO",
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
                     "uf": uf_licitacao,
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
