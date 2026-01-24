@@ -1,34 +1,32 @@
 import requests
 import json
 import os
-import time
-import urllib3
-import concurrent.futures
 import zipfile
+import concurrent.futures
 from datetime import datetime, timedelta
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import urllib3
 
 # --- CONFIGURAÇÕES ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-CNPJ_ALVO = "08778201000126"   # DROGAFONTE
-DATA_LIMITE_FINAL = datetime.now()
-DIAS_POR_CICLO = 1             
-MAX_WORKERS = 20               
-ARQ_ZIP = 'dados_pncp.zip'     
-ARQ_JSON_INTERNO = 'dados_pncp.json' 
+CNPJ_ALVO = "08778201000126"
+# Forçando uma data específica para teste (depois voltamos ao checkpoint)
+DATA_TESTE_FIXA = datetime(2024, 7, 2) 
+MAX_WORKERS = 10 
+ARQ_ZIP = 'dados_pncp.zip'
+ARQ_JSON_INTERNO = 'dados_pncp.json'
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
-# 1. ESTADOS EXCLUÍDOS
 ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
 
-# 2. PALAVRAS-CHAVE EXPANDIDAS (O objeto deve conter pelo menos uma)
 PALAVRAS_INTERESSE = [
     "MEDICAMENTO", "REMEDIO", "HOSPITAL", "SAUDE", "INSUMO", 
     "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", 
     "MEDICO", "ODONTO", "QUIMICO", "LABORAT", "CLINIC", 
-    "CIRURGIC", "SANEANTE", "PENSO", "DIALISE", "GAZE", "AGULHA"
+    "CIRURGIC", "SANEANTE", "PENSO", "DIALISE", "GAZE", "AGULHA",
+    "MATERIAIS", "AQUISICAO" # Adicionei termos genéricos para teste
 ]
 
 HEADERS = {
@@ -37,199 +35,130 @@ HEADERS = {
 }
 
 def objeto_e_relevante(texto):
-    """Verifica se o objeto da licitação é do nicho de saúde."""
     if not texto: return False
     texto_upper = texto.upper()
     return any(termo in texto_upper for termo in PALAVRAS_INTERESSE)
-
-def carregar_banco():
-    """Carrega o banco e aplica filtros, protegendo dados antigos sem campo 'objeto'."""
-    if os.path.exists(ARQ_ZIP):
-        try:
-            with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
-                arquivos = z.namelist()
-                json_file = next((f for f in arquivos if f.endswith('.json')), None)
-                
-                if json_file:
-                    with z.open(json_file) as f:
-                        dados = json.load(f)
-                        banco_filtrado = {}
-                        for lic in dados:
-                            uf = lic.get('uf')
-                            obj = lic.get('objeto')
-                            
-                            # Filtro 1: Se o estado está na lista de exclusão, descarta sempre
-                            if uf in ESTADOS_EXCLUIDOS:
-                                continue
-                            
-                            # Filtro 2: Se não tem 'objeto' (dado antigo), mantém para segurança.
-                            # Se tem, aplica a filtragem de palavras-chave.
-                            if obj is None or objeto_e_relevante(obj):
-                                banco_filtrado[lic.get('id_licitacao')] = lic
-                        
-                        removidos = len(dados) - len(banco_filtrado)
-                        if removidos > 0:
-                            print(f"🧹 Faxina: {removidos} registros removidos. Restam {len(banco_filtrado)}.")
-                        return banco_filtrado
-        except Exception as e:
-            print(f"⚠️ Erro ao carregar banco: {e}")
-    return {}
-
-def salvar_estado(banco, data_proxima):
-    lista_final = list(banco.values())
-    with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
-        json.dump(lista_final, f, ensure_ascii=False)
-    with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
-        z.write(ARQ_JSON_INTERNO, arcname=ARQ_JSON_INTERNO)
-    if os.path.exists(ARQ_JSON_INTERNO): os.remove(ARQ_JSON_INTERNO)
-    with open(ARQ_CHECKPOINT, 'w') as f:
-        f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [SUCESSO] Banco salvo com {len(lista_final)} licitações relevantes.")
-
-def ler_checkpoint():
-    if os.path.exists(ARQ_CHECKPOINT):
-        try:
-            with open(ARQ_CHECKPOINT, 'r') as f:
-                data_str = f.read().strip()
-                if data_str:
-                    return datetime.strptime(data_str, '%Y%m%d')
-        except: pass
-    return datetime(2025, 1, 1)
 
 def criar_sessao():
     session = requests.Session()
     session.headers.update(HEADERS)
     session.verify = False
-    retry = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+    retry = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     adapter = HTTPAdapter(max_retries=retry, pool_connections=MAX_WORKERS, pool_maxsize=MAX_WORKERS)
     session.mount('https://', adapter)
     session.mount('http://', adapter)
     return session
 
 def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
-    if not it.get('temResultado'): return None
+    # REMOVIDO O FILTRO 'temResultado' PARA VER SE ELE ENCONTRA O ITEM
+    # if not it.get('temResultado'): return None 
+    
     num_item = it.get('numeroItem')
     url_res = f"{url_base_itens}/{num_item}/resultados"
     try:
-        r = session.get(url_res, timeout=15)
+        r = session.get(url_res, timeout=10)
         if r.status_code == 200:
             vends = r.json()
+            if not vends: return None # Tem item, mas não tem ganhador ainda
+            
             if isinstance(vends, dict): vends = [vends]
             resultados = []
             for v in vends:
                 cnpj_venc = (v.get('niFornecedor') or "").replace(".", "").replace("/", "").replace("-", "")
-                dt_h = v.get('dataHomologacao') or v.get('dataResultado') or ""
-                if dt_h:
-                    try: dt_h = "/".join(dt_h.split('T')[0].split('-')[::-1])
-                    except: dt_h = "---"
-                else: dt_h = "---"
+                dt_h = v.get('dataHomologacao') or v.get('dataResultado') or "---"
                 resultados.append({
                     "item": num_item,
-                    "desc": it.get('descricao', ''),
-                    "qtd": float(v.get('quantidadeHomologada') or 0),
-                    "unitario": float(v.get('valorUnitarioHomologado') or 0),
                     "total": float(v.get('valorTotalHomologado') or 0),
                     "fornecedor": v.get('nomeRazaoSocialFornecedor'),
-                    "cnpj": cnpj_venc,
-                    "data_homo": dt_h,
-                    "e_alvo": (cnpj_alvo in cnpj_venc)
+                    "cnpj": cnpj_venc
                 })
             return resultados
     except: pass
     return None
 
-def run():
+def run_diagnostico():
     session = criar_sessao()
-    data_atual = ler_checkpoint()
+    data_atual = DATA_TESTE_FIXA
+    DATA_STR = data_atual.strftime('%Y%m%d')
     
-    if data_atual.date() > DATA_LIMITE_FINAL.date():
-        print("✅ Ranking atualizado!")
+    print(f"\n🕵️ MODO ESPIÃO ATIVADO: {data_atual.strftime('%d/%m/%Y')}")
+    print("Vamos analisar as primeiras 50 licitações e ver por que estão sendo ignoradas...\n")
+
+    url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+    params = { 
+        "dataInicial": DATA_STR, "dataFinal": DATA_STR, 
+        "codigoModalidadeContratacao": "6", "pagina": 1, "tamanhoPagina": 50 
+    }
+    
+    resp = session.get(url, params=params)
+    print(f"📡 Status da API: {resp.status_code}")
+    
+    if resp.status_code != 200:
+        print("❌ Erro na API do PNCP. O site pode estar fora do ar ou bloqueando.")
         return
 
-    banco_total = carregar_banco()
-    DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 🏥 BUSCA SAÚDE: {data_atual.strftime('%d/%m/%Y')} ---")
+    data_json = resp.json()
+    lics = data_json.get('data', [])
+    print(f"📦 Licitações encontradas na página 1: {len(lics)}")
 
-    pagina = 1
-    while True:
-        url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = { 
-            "dataInicial": DATA_STR, "dataFinal": DATA_STR, 
-            "codigoModalidadeContratacao": "6", "pagina": pagina, "tamanhoPagina": 50 
-        }
+    if not lics:
+        print("⚠️ A API retornou LISTA VAZIA para esta data. Tente outra data.")
+        return
+
+    contadores = {"estado_excluido": 0, "objeto_irrelevante": 0, "sem_itens": 0, "sucesso": 0}
+
+    for i, lic in enumerate(lics):
+        uf = lic.get('unidadeOrgao', {}).get('ufSigla')
+        obj = (lic.get('objeto', '') or "SEM OBJETO").upper()
+        orgao = lic.get('orgaoEntidade', {}).get('razaoSocial')
         
-        try:
-            resp = session.get(url, params=params, timeout=30)
-            if resp.status_code != 200: break
-            data_json = resp.json()
-            lics = data_json.get('data', [])
-            if not lics: break
-        except: break
+        print(f"--- Licitação #{i+1} ({uf}) ---")
+        
+        if uf in ESTADOS_EXCLUIDOS:
+            print(f"❌ Ignorada: Estado {uf} está na lista negra.")
+            contadores["estado_excluido"] += 1
+            continue
 
-        for lic in lics:
-            uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
-            objeto_desc = (lic.get('objeto', '') or "").strip()
+        if not objeto_e_relevante(obj):
+            print(f"❌ Ignorada: Objeto não tem palavras-chave.")
+            print(f"   Texto: {obj[:100]}...")
+            contadores["objeto_irrelevante"] += 1
+            continue
 
-            # Filtros Iniciais (UF e Palavras-chave)
-            if uf_licitacao in ESTADOS_EXCLUIDOS: continue
-            if not objeto_e_relevante(objeto_desc): continue
+        print(f"✅ PASSOU NO FILTRO! Verificando itens...")
+        print(f"   Órgão: {orgao}")
+        print(f"   Objeto: {obj[:60]}...")
 
-            # Se chegou aqui, é saúde e é de um estado permitido. Vamos processar:
-            cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
-            cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
-            ano = lic.get('anoCompra')
-            seq = lic.get('sequencialCompra')
-            uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
-            id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
+        # Tentar baixar itens
+        cnpj_org = str(lic.get('orgaoEntidade', {}).get('cnpj', '')).replace(".", "").replace("/", "").replace("-", "")
+        ano = lic.get('anoCompra')
+        seq = lic.get('sequencialCompra')
+        url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org}/compras/{ano}/{seq}/itens"
+        
+        r_it = session.get(url_itens, params={'pagina': 1}, timeout=10)
+        itens = r_it.json()
+        
+        if not itens:
+            print("   ⚠️ Sem itens cadastrados na API.")
+            contadores["sem_itens"] += 1
+            continue
             
-            url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org_limpo}/compras/{ano}/{seq}/itens"
-            todos_itens = []
-            p_it = 1
-            while True:
-                try:
-                    r_it = session.get(url_itens, params={'pagina': p_it, 'tamanhoPagina': 1000}, timeout=20)
-                    if r_it.status_code != 200: break
-                    lote = r_it.json()
-                    if not lote: break
-                    todos_itens.extend(lote)
-                    if len(lote) < 1000: break
-                    p_it += 1
-                except: break
+        print(f"   📄 Itens encontrados: {len(itens)}. Verificando resultados...")
+        
+        # Pega o primeiro item só para testar
+        res = processar_item_ranking(session, itens[0], url_itens, CNPJ_ALVO)
+        if res:
+            print(f"   🎉 TEM RESULTADO! Fornecedor: {res[0]['fornecedor']}")
+            contadores["sucesso"] += 1
+        else:
+            print("   ❄️ Sem resultado (Licitação publicada mas não finalizada ou API vazia).")
 
-            if not todos_itens: continue
-
-            itens_ranking = []
-            resumo = {}
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                futures = [executor.submit(processar_item_ranking, session, it, url_itens, CNPJ_ALVO) for it in todos_itens]
-                for f in concurrent.futures.as_completed(futures):
-                    res = f.result()
-                    if res:
-                        for r in res:
-                            itens_ranking.append(r)
-                            nome = r['fornecedor'] or "Desconhecido"
-                            resumo[nome] = resumo.get(nome, 0) + r['total']
-
-            if itens_ranking:
-                banco_total[id_lic] = {
-                    "id_licitacao": id_lic,
-                    "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "objeto": objeto_desc, # SALVAMENTO DO OBJETO PARA FILTRO FUTURO
-                    "edital": f"{lic.get('numeroCompra')}/{ano}",
-                    "uf": uf_licitacao,
-                    "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
-                    "uasg": uasg,
-                    "link_edital": f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}",
-                    "itens": itens_ranking,
-                    "resumo": resumo,
-                    "total_licitacao": sum(resumo.values())
-                }
-                print("💊", end="", flush=True)
-
-        if pagina >= data_json.get('totalPaginas', 1): break
-        pagina += 1
-
-    salvar_estado(banco_total, data_atual + timedelta(days=1))
+    print("\n--- RESUMO DO DIAGNÓSTICO ---")
+    print(f"Total analisado: {len(lics)}")
+    print(f"Ignorado por Estado: {contadores['estado_excluido']}")
+    print(f"Ignorado por Palavra-Chave: {contadores['objeto_irrelevante']}")
+    print(f"Com itens mas sem resultado: {len(lics) - sum(contadores.values()) + contadores['sucesso']}")
+    print(f"Sucessos confirmados: {contadores['sucesso']}")
 
 if __name__ == "__main__":
-    run()
+    run_diagnostico()
