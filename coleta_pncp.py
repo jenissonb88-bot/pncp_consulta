@@ -20,14 +20,15 @@ ARQ_ZIP = 'dados_pncp.zip'
 ARQ_JSON_INTERNO = 'dados_pncp.json' 
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
-# 1. ESTADOS EXCLUÍDOS
+# 1. ESTADOS EXCLUÍDOS (Não serão coletados nem mantidos no banco)
 ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
 
-# 2. PALAVRAS-CHAVE DE INTERESSE (O objeto deve conter pelo menos uma)
-# Adicionado: HOSPITAL, SAUDE, FARMAC, MEDICO para maior abrangência
+# 2. PALAVRAS-CHAVE EXPANDIDAS (O objeto deve conter pelo menos uma)
 PALAVRAS_INTERESSE = [
     "MEDICAMENTO", "REMEDIO", "HOSPITAL", "SAUDE", "INSUMO", 
-    "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", "MEDICO"
+    "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", 
+    "MEDICO", "ODONTO", "QUIMICO", "LABORAT", "CLINIC", 
+    "EQUIPAMENTO MEDICO", "SANEANTE", "CORRELATO", "CIRURGIC"
 ]
 
 HEADERS = {
@@ -36,10 +37,61 @@ HEADERS = {
 }
 
 def objeto_e_relevante(texto):
-    """Filtra se o texto contém as palavras-chave (ignora maiúsculas/minúsculas)"""
+    """Verifica se o objeto da licitação é relevante para o nicho de saúde."""
     if not texto: return False
     texto_upper = texto.upper()
     return any(termo in texto_upper for termo in PALAVRAS_INTERESSE)
+
+def carregar_banco():
+    """Lê o banco e aplica filtros, protegendo registros antigos sem campo 'objeto'."""
+    if os.path.exists(ARQ_ZIP):
+        try:
+            with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
+                arquivos = z.namelist()
+                json_file = next((f for f in arquivos if f.endswith('.json')), None)
+                
+                if json_file:
+                    with z.open(json_file) as f:
+                        dados = json.load(f)
+                        banco_filtrado = {}
+                        for lic in dados:
+                            uf = lic.get('uf')
+                            obj = lic.get('objeto')
+                            
+                            # Filtro 1: UF
+                            if uf in ESTADOS_EXCLUIDOS:
+                                continue
+                            
+                            # Filtro 2: Objeto (Mantém antigos sem objeto, filtra novos com objeto)
+                            if obj is None or objeto_e_relevante(obj):
+                                banco_filtrado[lic.get('id_licitacao')] = lic
+                        
+                        removidos = len(dados) - len(banco_filtrado)
+                        if removidos > 0:
+                            print(f"🧹 Limpeza: {removidos} registros removidos. Restam {len(banco_filtrado)}.")
+                        return banco_filtrado
+        except Exception as e:
+            print(f"⚠️ Erro ao carregar banco: {e}")
+    return {}
+
+def salvar_estado(banco, data_proxima):
+    lista_final = list(banco.values())
+    with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
+        json.dump(lista_final, f, ensure_ascii=False)
+    with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+        z.write(ARQ_JSON_INTERNO, arcname=ARQ_JSON_INTERNO)
+    if os.path.exists(ARQ_JSON_INTERNO): os.remove(ARQ_JSON_INTERNO)
+    with open(ARQ_CHECKPOINT, 'w') as f:
+        f.write(data_proxima.strftime('%Y%m%d'))
+    print(f"\n💾 [SUCESSO] Banco salvo com {len(lista_final)} licitações.")
+
+def ler_checkpoint():
+    if os.path.exists(ARQ_CHECKPOINT):
+        try:
+            with open(ARQ_CHECKPOINT, 'r') as f:
+                return datetime.strptime(f.read().strip(), '%Y%m%d')
+        except: pass
+    return datetime(2025, 1, 1)
 
 def criar_sessao():
     session = requests.Session()
@@ -51,61 +103,10 @@ def criar_sessao():
     session.mount('http://', adapter)
     return session
 
-def carregar_banco():
-    """Lê o ZIP e remove registros de estados excluídos ou objetos irrelevantes"""
-    if os.path.exists(ARQ_ZIP):
-        try:
-            with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
-                arquivos = z.namelist()
-                json_file = next((f for f in arquivos if f.endswith('.json')), None)
-                
-                if json_file:
-                    with z.open(json_file) as f:
-                        dados = json.load(f)
-                        # Aplica a limpeza no banco existente
-                        banco_filtrado = {
-                            lic.get('id_licitacao'): lic 
-                            for lic in dados 
-                            if lic.get('uf') not in ESTADOS_EXCLUIDOS and objeto_e_relevante(lic.get('objeto'))
-                        }
-                        
-                        removidos = len(dados) - len(banco_filtrado)
-                        if removidos > 0:
-                            print(f"🧹 Faxina: {removidos} registros antigos removidos por filtro de Estado/Objeto.")
-                        
-                        return banco_filtrado
-        except Exception as e:
-            print(f"⚠️ Erro ao carregar banco: {e}")
-    return {}
-
-def salvar_estado(banco, data_proxima):
-    lista_final = list(banco.values())
-    with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
-        json.dump(lista_final, f, ensure_ascii=False)
-    
-    with zipfile.ZipFile(ARQ_ZIP, 'w', compression=zipfile.ZIP_DEFLATED) as z:
-        z.write(ARQ_JSON_INTERNO, arcname=ARQ_JSON_INTERNO)
-    
-    if os.path.exists(ARQ_JSON_INTERNO):
-        os.remove(ARQ_JSON_INTERNO)
-        
-    with open(ARQ_CHECKPOINT, 'w') as f:
-        f.write(data_proxima.strftime('%Y%m%d'))
-    print(f"\n💾 [SUCESSO] Banco atualizado: {len(lista_final)} licitações de saúde/hospitalares.")
-
-def ler_checkpoint():
-    if os.path.exists(ARQ_CHECKPOINT):
-        try:
-            with open(ARQ_CHECKPOINT, 'r') as f:
-                return datetime.strptime(f.read().strip(), '%Y%m%d')
-        except: pass
-    return datetime(2025, 1, 1)
-
 def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
     if not it.get('temResultado'): return None
     num_item = it.get('numeroItem')
     url_res = f"{url_base_itens}/{num_item}/resultados"
-    
     try:
         r = session.get(url_res, timeout=15)
         if r.status_code == 200:
@@ -114,14 +115,11 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
             resultados = []
             for v in vends:
                 cnpj_venc = (v.get('niFornecedor') or "").replace(".", "").replace("/", "").replace("-", "")
-                
                 dt_h = v.get('dataHomologacao') or v.get('dataResultado') or ""
                 if dt_h:
-                    try:
-                        dt_h = "/".join(dt_h.split('T')[0].split('-')[::-1])
+                    try: dt_h = "/".join(dt_h.split('T')[0].split('-')[::-1])
                     except: dt_h = "---"
                 else: dt_h = "---"
-
                 resultados.append({
                     "item": num_item,
                     "desc": it.get('descricao', ''),
@@ -142,17 +140,23 @@ def run():
     data_atual = ler_checkpoint()
     
     if data_atual.date() > DATA_LIMITE_FINAL.date():
-        print("✅ Tudo atualizado!")
+        print("✅ Ranking atualizado!")
         return
 
     banco_total = carregar_banco()
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 🏥 BUSCA SAÚDE: Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 🚀 BUSCA REFINADA: Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
         url = "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        params = { "dataInicial": DATA_STR, "dataFinal": DATA_STR, "codigoModalidadeContratacao": "6", "pagina": pagina, "tamanhoPagina": 50 }
+        params = { 
+            "dataInicial": DATA_STR, 
+            "dataFinal": DATA_STR, 
+            "codigoModalidadeContratacao": "6", 
+            "pagina": pagina, 
+            "tamanhoPagina": 50 
+        }
         
         try:
             resp = session.get(url, params=params, timeout=30)
@@ -163,16 +167,12 @@ def run():
         except: break
 
         for lic in lics:
-            # --- FILTROS DE ESTADO E OBJETO ---
             uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
             objeto_desc = lic.get('objeto', '') or ""
 
-            if uf_licitacao in ESTADOS_EXCLUIDOS:
-                continue
-            
-            if not objeto_e_relevante(objeto_desc):
-                continue
-            # ----------------------------------
+            # Filtros de Coleta
+            if uf_licitacao in ESTADOS_EXCLUIDOS: continue
+            if not objeto_e_relevante(objeto_desc): continue
 
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
@@ -213,7 +213,7 @@ def run():
                 banco_total[id_lic] = {
                     "id_licitacao": id_lic,
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
-                    "objeto": objeto_desc,
+                    "objeto": objeto_desc, # Agora salvando para evitar exclusão futura
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
                     "uf": uf_licitacao,
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
@@ -223,7 +223,7 @@ def run():
                     "resumo": resumo,
                     "total_licitacao": sum(resumo.values())
                 }
-                print("💉", end="", flush=True)
+                print("💊", end="", flush=True)
 
         if pagina >= data_json.get('totalPaginas', 1): break
         pagina += 1
