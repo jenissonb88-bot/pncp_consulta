@@ -14,19 +14,32 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CNPJ_ALVO = "08778201000126"   # DROGAFONTE
 DATA_LIMITE_FINAL = datetime.now()
-DIAS_POR_CICLO = 1             # Processa 1 dia por vez
-MAX_WORKERS = 20               # Threads
+DIAS_POR_CICLO = 1             
+MAX_WORKERS = 20               
 ARQ_ZIP = 'dados_pncp.zip'     
 ARQ_JSON_INTERNO = 'dados_pncp.json' 
 ARQ_CHECKPOINT = 'checkpoint.txt'
 
-# ESTADOS QUE VOCÊ NÃO QUER COLETAR E DESEJA REMOVER DO BANCO
+# 1. ESTADOS EXCLUÍDOS
 ESTADOS_EXCLUIDOS = ["PR", "SC", "RS", "DF", "RO", "RR", "AP", "AC"]
+
+# 2. PALAVRAS-CHAVE DE INTERESSE (O objeto deve conter pelo menos uma)
+# Adicionado: HOSPITAL, SAUDE, FARMAC, MEDICO para maior abrangência
+PALAVRAS_INTERESSE = [
+    "MEDICAMENTO", "REMEDIO", "HOSPITAL", "SAUDE", "INSUMO", 
+    "FRALDA", "SORO", "ABSORVENTE", "HOSPITALAR", "FARMAC", "MEDICO"
+]
 
 HEADERS = {
     'Accept': 'application/json',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
+
+def objeto_e_relevante(texto):
+    """Filtra se o texto contém as palavras-chave (ignora maiúsculas/minúsculas)"""
+    if not texto: return False
+    texto_upper = texto.upper()
+    return any(termo in texto_upper for termo in PALAVRAS_INTERESSE)
 
 def criar_sessao():
     session = requests.Session()
@@ -39,7 +52,7 @@ def criar_sessao():
     return session
 
 def carregar_banco():
-    """Carrega o banco e já filtra removendo os estados excluídos para poupar espaço"""
+    """Lê o ZIP e remove registros de estados excluídos ou objetos irrelevantes"""
     if os.path.exists(ARQ_ZIP):
         try:
             with zipfile.ZipFile(ARQ_ZIP, 'r') as z:
@@ -49,25 +62,24 @@ def carregar_banco():
                 if json_file:
                     with z.open(json_file) as f:
                         dados = json.load(f)
-                        # Filtra o banco: Mantém apenas quem NÃO está na lista de exclusão
+                        # Aplica a limpeza no banco existente
                         banco_filtrado = {
                             lic.get('id_licitacao'): lic 
                             for lic in dados 
-                            if lic.get('uf') not in ESTADOS_EXCLUIDOS
+                            if lic.get('uf') not in ESTADOS_EXCLUIDOS and objeto_e_relevante(lic.get('objeto'))
                         }
                         
                         removidos = len(dados) - len(banco_filtrado)
                         if removidos > 0:
-                            print(f"🧹 Limpeza: {removidos} registros de estados excluídos foram removidos do banco.")
+                            print(f"🧹 Faxina: {removidos} registros antigos removidos por filtro de Estado/Objeto.")
                         
                         return banco_filtrado
         except Exception as e:
-            print(f"⚠️ Aviso: Criando novo banco (Erro ao ler ZIP: {e})")
+            print(f"⚠️ Erro ao carregar banco: {e}")
     return {}
 
 def salvar_estado(banco, data_proxima):
     lista_final = list(banco.values())
-    
     with open(ARQ_JSON_INTERNO, 'w', encoding='utf-8') as f:
         json.dump(lista_final, f, ensure_ascii=False)
     
@@ -79,8 +91,7 @@ def salvar_estado(banco, data_proxima):
         
     with open(ARQ_CHECKPOINT, 'w') as f:
         f.write(data_proxima.strftime('%Y%m%d'))
-        
-    print(f"\n💾 [SUCESSO] Banco salvo: {len(lista_final)} licitações.")
+    print(f"\n💾 [SUCESSO] Banco atualizado: {len(lista_final)} licitações de saúde/hospitalares.")
 
 def ler_checkpoint():
     if os.path.exists(ARQ_CHECKPOINT):
@@ -107,8 +118,7 @@ def processar_item_ranking(session, it, url_base_itens, cnpj_alvo):
                 dt_h = v.get('dataHomologacao') or v.get('dataResultado') or ""
                 if dt_h:
                     try:
-                        dt_h = dt_h.split('T')[0].split('-')[::-1]
-                        dt_h = "/".join(dt_h)
+                        dt_h = "/".join(dt_h.split('T')[0].split('-')[::-1])
                     except: dt_h = "---"
                 else: dt_h = "---"
 
@@ -132,14 +142,12 @@ def run():
     data_atual = ler_checkpoint()
     
     if data_atual.date() > DATA_LIMITE_FINAL.date():
-        print("✅ Ranking totalmente atualizado!")
+        print("✅ Tudo atualizado!")
         return
 
-    # O carregar_banco agora já filtra os dados antigos
     banco_total = carregar_banco()
-    
     DATA_STR = data_atual.strftime('%Y%m%d')
-    print(f"--- 🚀 RANKING: Processando Dia {data_atual.strftime('%d/%m/%Y')} ---")
+    print(f"--- 🏥 BUSCA SAÚDE: Dia {data_atual.strftime('%d/%m/%Y')} ---")
 
     pagina = 1
     while True:
@@ -155,11 +163,16 @@ def run():
         except: break
 
         for lic in lics:
-            # --- FILTRO DE ESTADOS NA COLETA NOVA ---
+            # --- FILTROS DE ESTADO E OBJETO ---
             uf_licitacao = lic.get('unidadeOrgao', {}).get('ufSigla')
+            objeto_desc = lic.get('objeto', '') or ""
+
             if uf_licitacao in ESTADOS_EXCLUIDOS:
                 continue
-            # ---------------------------------------
+            
+            if not objeto_e_relevante(objeto_desc):
+                continue
+            # ----------------------------------
 
             cnpj_org_bruto = lic.get('orgaoEntidade', {}).get('cnpj', '')
             cnpj_org_limpo = str(cnpj_org_bruto).replace(".", "").replace("/", "").replace("-", "").strip()
@@ -167,7 +180,6 @@ def run():
             seq = lic.get('sequencialCompra')
             uasg = str(lic.get('unidadeOrgao', {}).get('codigoUnidade', '')).strip()
             id_lic = f"{uasg}{str(seq).zfill(5)}{ano}"
-            link_pncp = f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}"
             
             url_itens = f"https://pncp.gov.br/api/pncp/v1/orgaos/{cnpj_org_limpo}/compras/{ano}/{seq}/itens"
             todos_itens = []
@@ -201,16 +213,17 @@ def run():
                 banco_total[id_lic] = {
                     "id_licitacao": id_lic,
                     "orgao": lic.get('orgaoEntidade', {}).get('razaoSocial'),
+                    "objeto": objeto_desc,
                     "edital": f"{lic.get('numeroCompra')}/{ano}",
                     "uf": uf_licitacao,
                     "cidade": lic.get('unidadeOrgao', {}).get('municipioNome'),
                     "uasg": uasg,
-                    "link_edital": link_pncp,
+                    "link_edital": f"https://pncp.gov.br/app/editais/{cnpj_org_limpo}/{ano}/{seq}",
                     "itens": itens_ranking,
                     "resumo": resumo,
                     "total_licitacao": sum(resumo.values())
                 }
-                print("✅", end="", flush=True)
+                print("💉", end="", flush=True)
 
         if pagina >= data_json.get('totalPaginas', 1): break
         pagina += 1
