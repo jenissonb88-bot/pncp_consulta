@@ -27,30 +27,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐍 2. Python 3.11
+      - name: 🧹 2. Limpeza de Espaço em Disco
+        # Este passo remove pacotes pesados pré-instalados que você não usa
+        run: |
+          echo "Espaço antes da limpeza:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          echo "Espaço após a limpeza:"
+          df -h
+
+      - name: 🐍 3. Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 3. Dependências
+      - name: 📦 4. Dependências
         run: |
           python -m pip install --upgrade pip
           pip install requests urllib3
 
-      - name: 🔄 4. Executar Coleta
+      - name: 🔄 5. Executar Coleta
         run: |
           git pull origin main --rebase || echo "OK"
           python coleta_pncp.py
 
-      - name: ⚙️ 5. Configurar Git
+      - name: ⚙️ 6. Configurar Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 📤 6. Salvar Dados (ZIP)
+      - name: 📤 7. Salvar Dados (ZIP)
         id: push-step
         run: |
-          # Remove JSON se existir por engano
+          # Remove JSON se existir por engano para não ocupar espaço no Git
           git rm --cached dados_pncp.json || echo "Limpo"
           
           # Adiciona ZIP e Checkpoint
@@ -66,18 +79,24 @@ jobs:
             echo "push_success=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🚀 7. Auto-Reinício
+      - name: 🚀 8. Auto-Reinício
         if: steps.push-step.outputs.push_success == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CHECKPOINT=$(cat checkpoint.txt)
-          HOJE=$(date +'%Y%m%d')
-          
-          if [ "$CHECKPOINT" -lt "$HOJE" ]; then
-            echo "Reiniciando para buscar próximo dia..."
-            sleep 10
-            gh workflow run main.yml
+          # Verifica se o arquivo existe antes de ler para evitar erro de script
+          if [ -f checkpoint.txt ]; then
+            CHECKPOINT=$(cat checkpoint.txt)
+            HOJE=$(date +'%Y%m%d')
+            
+            if [ "$CHECKPOINT" -lt "$HOJE" ]; then
+              echo "Reiniciando para buscar próximo dia..."
+              sleep 10
+              # Certifique-se que o nome do arquivo aqui é o mesmo deste YAML (ex: main.yml)
+              gh workflow run main.yml
+            else
+              echo "✅ Tudo atualizado."
+            fi
           else
-            echo "✅ Tudo atualizado."
+            echo "Checkpoint não encontrado."
           fi
